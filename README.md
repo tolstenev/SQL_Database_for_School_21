@@ -349,7 +349,7 @@ Output example:
 
 ##### 13) Determine the percentage of peers who have ever successfully passed a check on their birthday
 Also determine the percentage of peers who have ever failed a check on their birthday. \
-Output format: percentage of successes on birthday, percentage of failures on birthday
+Output format: percentage  of peers who have ever successfully passed a check on their birthday, percentage of peers who have ever failed a check on their birthday
 
 Output example:
 | SuccessfulChecks | UnsuccessfulChecks |
@@ -394,7 +394,7 @@ Output format: list of days
 Output format: peer's nickname, number of completed tasks
 
 Output example:
-| Peer   | XP    |
+| Peer   | CompletedTasksCount    |
 |--------|-------|
 | Amogus | 5 |
 
@@ -452,4 +452,4 @@ Add the creation and filling of this database, as well as the written procedures
 
 ##### 4) Create a stored procedure with an input parameter that outputs names and descriptions of object types (only stored procedures and scalar functions) that have a string specified by the procedure parameter.
 
-💡 [Tap here](https://forms.yandex.ru/u/635ab43e2530c22087ef3597/) **to leave your feedback on the project**. Pedago Team really tries to make your educational experience better.
+💡 [Tap here](https://forms.yandex.ru/cloud/64182088eb61462532cee6b5/) **to leave your feedback on the project**. Pedago Team really tries to make your educational experience better.
