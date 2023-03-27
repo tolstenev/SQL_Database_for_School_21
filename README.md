@@ -251,15 +251,7 @@ Output example:
 Function parameters: day, for example 12.05.2022. \
 The function returns only a list of peers.
 
-##### 4) Find the percentage of successful and unsuccessful checks for all time
-Output format: percentage of successful checks, percentage of unsuccessful ones
-
-Output example:
-| SuccessfulChecks | UnsuccessfulChecks |
-|------------------|--------------------|
-| 35               | 65                 |
-
-##### 5) Calculate the change in the number of peer points of each peer using the TransferredPoints table
+##### 4) Calculate the change in the number of peer points of each peer using the TransferredPoints table
 Output the result sorted by the change in the number of points. \
 Output format: peer's nickname, change in the number of peer points
 
@@ -270,7 +262,7 @@ Output example:
 | Amogus | 1            |
 | Sus    | -3           |
 
-##### 6) Calculate the change in the number of peer points of each peer using the table returned by [the first function from Part 3](#1-write-a-function-that-returns-the-transferredpoints-table-in-a-more-human-readable-form)
+##### 5) Calculate the change in the number of peer points of each peer using the table returned by [the first function from Part 3](#1-write-a-function-that-returns-the-transferredpoints-table-in-a-more-human-readable-form)
 Output the result sorted by the change in the number of points. \
 Output format: peer's nickname, change in the number of peer points
 
@@ -281,7 +273,7 @@ Output example:
 | Amogus | 1            |
 | Sus    | -3           |
 
-##### 7) Find the most frequently checked task for each day
+##### 6) Find the most frequently checked task for each day
 If there is the same number of checks for some tasks in a certain day, output all of them. \
 Output format: day, task name
 
@@ -292,11 +284,7 @@ Output example:
 | 17.04.2022 | CPP3 |
 | 23.12.2021 | C5   |
 
-##### 8) Determine the duration of the last P2P check
-Duration means the difference between the time specified in the record with the status "start" and the time specified in the record with the status "success" or "failure". \
-Output format: check duration
-
-##### 9) Find all peers who have completed the whole given block of tasks and the completion date of the last task
+##### 7) Find all peers who have completed the whole given block of tasks and the completion date of the last task
 Procedure parameters: name of the block, for example “CPP”. \
 The result is sorted by the date of completion. \
 Output format: peer's name, date of completion of the block (i.e. the last completed task from that block)
@@ -308,7 +296,7 @@ Output example:
 | Amogus | 17.05.2022 |
 | Aboba  | 12.05.2022 |
 
-##### 10) Determine which peer each student should go to for a check.
+##### 8) Determine which peer each student should go to for a check.
 You should determine it according to the recommendations of the peer's friends, i.e. you need to find the peer with the greatest number of friends who recommend to be checked by him. \
 Output format: peer's nickname, nickname of the checker found
 
@@ -319,7 +307,7 @@ Output example:
 | Amogus | Aboba           |
 | Sus    | Aboba           |
 
-##### 11) Determine the percentage of peers who:
+##### 9) Determine the percentage of peers who:
 - Started only block 1
 - Started only block 2
 - Started both
@@ -335,19 +323,7 @@ Output example:
 |---------------|---------------|-------------------|--------------------|
 | 20            | 20            | 5                 | 55                 |
 
-##### 12) Determine *N* peers with the greatest number of friends
-Parameters of the procedure: the *N* number of peers . \
-The result is sorted by the number of friends. \
-Output format: peer's name, number of friends
-
-Output example:
-| Peer   | FriendsCount |
-|--------|-------------|
-| Amogus | 15          |
-| Aboba  | 8           |
-| Sus    | 0           |
-
-##### 13) Determine the percentage of peers who have ever successfully passed a check on their birthday
+##### 10) Determine the percentage of peers who have ever successfully passed a check on their birthday
 Also determine the percentage of peers who have ever failed a check on their birthday. \
 Output format: percentage  of peers who have ever successfully passed a check on their birthday, percentage of peers who have ever failed a check on their birthday
 
@@ -356,23 +332,11 @@ Output example:
 |------------------|--------------------|
 | 60               | 40                 |
 
-##### 14) Determine the total amount of XP gained by each peer
-If one task is performed more than once, the amount of XP received for it equals its maximum amount for that task. \
-Output the result sorted by number of XP. \
-Output format: peer's name, the number of XP
-
-Output example:
-| Peer   | XP    |
-|--------|-------|
-| Amogus | 15000 |
-| Aboba  | 8000  |
-| Sus    | 400   |
-
-##### 15) Determine all peers who did the given tasks 1 and 2, but did not do task 3
+##### 11) Determine all peers who did the given tasks 1 and 2, but did not do task 3
 Procedure parameters: names of tasks 1, 2 and 3. \
 Output format: list of peers
 
-##### 16) Using recursive common table expression, output the number of preceding tasks for each task
+##### 12) Using recursive common table expression, output the number of preceding tasks for each task
 I. e. How many tasks have to be done, based on entry conditions, to get access to the current one. \
 Output format: task name, number of preceding tasks
 
@@ -383,22 +347,14 @@ Output example:
 | A1   | 9         |
 | C5   | 1         |
 
-##### 17) Find "lucky" days for checks. A day is considered "lucky" if it has at least *N* consecutive successful checks
+##### 13) Find "lucky" days for checks. A day is considered "lucky" if it has at least *N* consecutive successful checks
 Parameters of the procedure: the *N* number of consecutive successful checks . \
 The time of the check is the start time of the P2P step. \
 Successful consecutive checks are the checks with no unsuccessful checks in between. \
 The amount of XP for each of these checks must be at least 80% of the maximum. \
 Output format: list of days
 
-##### 18) Determine the peer with the greatest number of completed tasks
-Output format: peer's nickname, number of completed tasks
-
-Output example:
-| Peer   | CompletedTasksCount    |
-|--------|-------|
-| Amogus | 5 |
-
-##### 19) Find the peer with the highest amount of XP
+##### 14) Find the peer with the highest amount of XP
 Output format: peer's nickname, amount of XP
 
 Output example:
@@ -406,25 +362,15 @@ Output example:
 |--------|-------|
 | Amogus | 15000 |
 
-##### 20) Find the peer who spent the longest amount of time on campus today
-Output format: peer's nickname
-
-##### 21) Determine the peers that came before the given time at least *N* times during the whole time
+##### 15) Determine the peers that came before the given time at least *N* times during the whole time
 Procedure parameters: time, *N* number of times . \
 Output format: list of peers
 
-##### 22) Determine the peers who left the campus more than *M* times during the last *N* days
+##### 16) Determine the peers who left the campus more than *M* times during the last *N* days
 Procedure parameters: *N* number of days , *M* number of times . \
 Output format: list of peers
 
-##### 23) Determine which peer was the last to come in today
-Output format: peer's nickname
-
-##### 24) Determine the peer that left campus yesterday for more than *N* minutes
-Parameters of the procedure: number of minutes *N*. \
-Output format: list of peers
-
-##### 25) Determine for each month the percentage of early entries
+##### 17) Determine for each month the percentage of early entries
 For each month, count how many times people born in that month came to campus during the whole time (we'll call this the total number of entries). \
 For each month, count the number of times people born in that month have come to campus before 12:00 in all time (we'll call this the number of early entries). \
 For each month, count the percentage of early entries to campus relative to the total number of entries. \
