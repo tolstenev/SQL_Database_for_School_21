@@ -177,3 +177,57 @@ VALUES
   (3, 'peer3', '2023-07-01', '10:00:00', 1),
   (4, 'peer4', '2023-07-01', '11:00:00', 1),
   (5, 'peer5', '2023-07-01', '12:00:00', 1);
+
+  -- Процедура импорта данных в таблицу Peers из файла CSV
+DELIMITER //
+
+CREATE PROCEDURE ImportPeers(IN fileName VARCHAR(255), IN delimiter CHAR(1))
+BEGIN
+  SET @query = CONCAT("LOAD DATA INFILE '", fileName, "' INTO TABLE Peers FIELDS TERMINATED BY '", delimiter, "' IGNORE 1 LINES;");
+  PREPARE stmt FROM @query;
+  EXECUTE stmt;
+  DEALLOCATE PREPARE stmt;
+END //
+
+DELIMITER ;
+
+-- Процедура экспорта данных из таблицы Peers в файл CSV
+DELIMITER //
+
+CREATE PROCEDURE ExportPeers(IN fileName VARCHAR(255), IN delimiter CHAR(1))
+BEGIN
+  SET @query = CONCAT("SELECT * INTO OUTFILE '", fileName, "' FIELDS TERMINATED BY '", delimiter, "' FROM Peers;");
+  PREPARE stmt FROM @query;
+  EXECUTE stmt;
+  DEALLOCATE PREPARE stmt;
+END //
+
+DELIMITER ;
+
+-- Аналогично создайте процедуры импорта и экспорта для каждой оставшейся таблицы
+
+-- Процедура импорта данных в таблицу Tasks из файла CSV
+DELIMITER //
+
+CREATE PROCEDURE ImportTasks(IN fileName VARCHAR(255), IN delimiter CHAR(1))
+BEGIN
+  SET @query = CONCAT("LOAD DATA INFILE '", fileName, "' INTO TABLE Tasks FIELDS TERMINATED BY '", delimiter, "' IGNORE 1 LINES;");
+  PREPARE stmt FROM @query;
+  EXECUTE stmt;
+  DEALLOCATE PREPARE stmt;
+END //
+
+DELIMITER ;
+
+-- Процедура экспорта данных из таблицы Tasks в файл CSV
+DELIMITER //
+
+CREATE PROCEDURE ExportTasks(IN fileName VARCHAR(255), IN delimiter CHAR(1))
+BEGIN
+  SET @query = CONCAT("SELECT * INTO OUTFILE '", fileName, "' FIELDS TERMINATED BY '", delimiter, "' FROM Tasks;");
+  PREPARE stmt FROM @query;
+  EXECUTE stmt;
+  DEALLOCATE PREPARE stmt;
+END //
+
+DELIMITER ;
