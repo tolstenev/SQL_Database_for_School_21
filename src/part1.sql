@@ -1,233 +1,257 @@
--- Создание таблицы Peers
-CREATE TABLE Peers (
-  PeerNickname VARCHAR(255) PRIMARY KEY,
-  Birthday DATE
+-- TODO: проверить все ограничения в таблицах
+-- время проверки Verter'ом не может быть раньше, чем окончание проверки P2P
+-- проверка Verter'ом может ссылаться только на те проверки в таблице Checks, которые уже включают в себя успешную P2P проверку
+-- в таблице transferred_points количество points_amount должно быть неотрицательным
+-- в таблице friends поля peer1 и peer2 для одной записи не могут совпадать
+-- в таблице recommendations рекомендовать можно только того, у кого был на проверке, то есть в поле peer можно добавлять записи checked_peer из transferred_points, а в recommended_peer можно добавлять только checking_peer соответствующего checked_peer
+-- количество xp в таблице xp не может превышать максимальное доступное для проверяемой задачи - поле max_xp из таблицы tasks
+-- поле check_id таблицы xp может ссылаться только на успешные проверки
+-- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
+
+
+-- Создание таблицы peers
+CREATE TABLE peers
+(
+    nickname varchar(16) primary key,
+    birthday date
 );
 
--- Создание таблицы Tasks
-CREATE TABLE Tasks (
-  TaskName VARCHAR(255) PRIMARY KEY,
-  EntryTaskName VARCHAR(255),
-  MaxXP INT,
-  FOREIGN KEY (EntryTaskName) REFERENCES Tasks(TaskName)
+-- Заполнение таблицы peers
+INSERT INTO peers (nickname, birthday)
+VALUES ('yonnarge', '1997-10-07'),
+       ('nyarlath', '2004-09-14'),
+       ('cherigra', '1988-12-15'),
+       ('tamelabe', '1996-08-11'),
+       ('manhunte', '1991-09-07');
+
+-- Создание таблицы tasks
+CREATE TABLE tasks
+(
+    title       varchar(32) primary key,
+    parent_task varchar(32),
+    max_xp      int,
+    FOREIGN KEY (parent_task) REFERENCES tasks (title)
 );
 
--- Создание таблицы P2P
-CREATE TABLE P2P (
-  ID INT PRIMARY KEY,
-  CheckID INT,
-  PeerNickname VARCHAR(255),
-  P2PStatus ENUM('Start', 'Success', 'Failure'),
-  Time DATETIME,
-  FOREIGN KEY (CheckID) REFERENCES Checks(ID),
-  FOREIGN KEY (PeerNickname) REFERENCES Peers(PeerNickname)
+-- Заполнение таблицы tasks
+INSERT INTO tasks (title, parent_task, max_xp)
+VALUES ('Pool', NULL, 0),
+       ('C2_Simple_Bash_Utils', 'Pool', 250),
+       ('C3_s21_stringplus', 'C2_Simple_Bash_Utils', 500),
+       ('C5_s21_decimal', 'C3_s21_stringplus', 350),
+       ('DO1_Linux', 'C3_s21_stringplus', 300),
+       ('C6_s21_matrix', 'C5_s21_decimal', 200);
+
+-- Создание типа перечисления для статуса проверки
+CREATE TYPE state_of_check AS ENUM ('Start', 'Success', 'Failure');
+
+-- Создание таблицы p2p
+CREATE TABLE p2p
+(
+    id            serial primary key,
+    check_id      int,
+    checking_peer varchar(16),
+    state         state_of_check,
+    time          timestamp,
+    FOREIGN KEY (check_id) REFERENCES checks (id),
+    FOREIGN KEY (checking_peer) REFERENCES peers (nickname)
 );
 
--- Создание таблицы Verter
-CREATE TABLE Verter (
-  ID INT PRIMARY KEY,
-  CheckID INT,
-  VerterStatus ENUM('Start', 'Success', 'Failure'),
-  Time DATETIME,
-  FOREIGN KEY (CheckID) REFERENCES Checks(ID)
+-- Заполнение таблицы p2p
+INSERT INTO p2p (id, check_id, checking_peer, state, time)
+VALUES (1, 1, 'yonnarge', 'start', '2023-07-01 10:00:00'),
+       (2, 1, 'yonnarge', 'success', '2023-07-01 11:00:00'),
+       (3, 2, 'cherigra', 'start', '2023-07-02 09:00:00'),
+       (4, 2, 'cherigra', 'success', '2023-07-02 10:30:00'),
+       (5, 3, 'manhunte', 'start', '2023-07-03 14:00:00'),
+       (6, 3, 'manhunte', 'failure', '2023-07-03 14:30:00'),
+       (7, 4, 'tamelabe', 'start', '2023-07-04 09:00:00'),
+       (8, 4, 'tamelabe', 'success', '2023-07-04 10:30:00'),
+       (9, 5, 'nyarlath', 'start', '2023-07-05 21:30:00'),
+       (10, 5, 'nyarlath', 'success', '2023-07-05 22:00:00');
+
+-- Создание таблицы verter
+CREATE TABLE verter
+(
+    id            serial primary key,
+    check_id      int,
+    verter_status state_of_check,
+    time          timestamp,
+    FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 
--- Создание таблицы Checks
-CREATE TABLE Checks (
-  ID INT PRIMARY KEY,
-  PeerNickname VARCHAR(255),
-  TaskName VARCHAR(255),
-  CheckDate DATE,
-  FOREIGN KEY (PeerNickname) REFERENCES Peers(PeerNickname),
-  FOREIGN KEY (TaskName) REFERENCES Tasks(TaskName)
+-- Заполнение таблицы verter
+INSERT INTO verter (id, check_id, verter_status, time)
+VALUES (1, 1, 'start', '2023-07-01 11:01:00'),
+       (2, 1, 'success', '2023-07-01 11:02:00'),
+       (3, 2, 'start', '2023-07-02 10:31:00'),
+       (4, 2, 'success', '2023-07-02 10:32:00'),
+       (5, 5, 'start', '2023-07-05 22:01:11'),
+       (6, 5, 'failure', '2023-07-05 22:02:23');
+
+-- Создание таблицы checks
+CREATE TABLE checks
+(
+    id   serial primary key,
+    peer varchar(16),
+    task varchar(32),
+    date date,
+    FOREIGN KEY (peer) REFERENCES peers (nickname),
+    FOREIGN KEY (task) REFERENCES tasks (title)
 );
 
--- Создание таблицы TransferredPoints
-CREATE TABLE TransferredPoints (
-  ID INT PRIMARY KEY,
-  ReviewerPeerNickname VARCHAR(255),
-  ReviewedPeerNickname VARCHAR(255),
-  TotalPoints INT,
-  FOREIGN KEY (ReviewerPeerNickname) REFERENCES Peers(PeerNickname),
-  FOREIGN KEY (ReviewedPeerNickname) REFERENCES Peers(PeerNickname)
+-- Заполнение таблицы checks
+INSERT INTO checks (id, peer, task, date)
+VALUES (1, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-01'),
+       (2, 'nyarlath', 'C3_s21_stringplus', '2023-07-02'),
+       (3, 'cherigra', 'C5_s21_decimal', '2023-07-03'),
+       (4, 'manhunte', 'DO1_Linux', '2023-07-04'),
+       (5, 'yonnarge', 'C6_s21_matrix', '2023-07-05');
+
+-- Создание таблицы transferred_points
+CREATE TABLE transferred_points
+(
+    id            serial primary key,
+    checking_peer varchar(16),
+    checked_peer  varchar(16),
+    points_amount int,
+    FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
+    FOREIGN KEY (checked_peer) REFERENCES peers (nickname)
 );
 
--- Создание таблицы Friends
-CREATE TABLE Friends (
-  ID INT PRIMARY KEY,
-  Peer1Nickname VARCHAR(255),
-  Peer2Nickname VARCHAR(255),
-  FOREIGN KEY (Peer1Nickname) REFERENCES Peers(PeerNickname),
-  FOREIGN KEY (Peer2Nickname) REFERENCES Peers(PeerNickname)
+-- Заполнение таблицы transferred_points
+INSERT INTO transferred_points (id, checking_peer, checked_peer, points_amount)
+VALUES (1, 'yonnarge', 'tamelabe', 1),
+       (2, 'cherigra', 'nyarlath', 1),
+       (3, 'manhunte', 'cherigra', 1),
+       (4, 'tamelabe', 'manhunte', 1),
+       (5, 'nyarlath', 'yonnarge', 1);
+
+-- Создание таблицы friends
+CREATE TABLE friends
+(
+    id    serial primary key,
+    peer1 varchar(16),
+    peer2 varchar(16),
+    FOREIGN KEY (peer1) REFERENCES peers (nickname),
+    FOREIGN KEY (peer2) REFERENCES peers (nickname)
 );
 
--- Создание таблицы Recommendations
-CREATE TABLE Recommendations (
-  ID INT PRIMARY KEY,
-  PeerNickname VARCHAR(255),
-  RecommendedPeerNickname VARCHAR(255),
-  FOREIGN KEY (PeerNickname) REFERENCES Peers(PeerNickname),
-  FOREIGN KEY (RecommendedPeerNickname) REFERENCES Peers(PeerNickname)
+-- Заполнение таблицы friends
+INSERT INTO friends (id, peer1, peer2)
+VALUES (1, 'manhunte', 'cherigra'),
+       (2, 'nyarlath', 'tamelabe'),
+       (3, 'tamelabe', 'yonnarge'),
+       (4, 'yonnarge', 'nyarlath'),
+       (5, 'cherigra', 'nyarlath');
+
+-- Создание таблицы recommendations
+CREATE TABLE recommendations
+(
+    id               serial primary key,
+    peer             varchar(16),
+    recommended_peer varchar(16),
+    FOREIGN KEY (peer) REFERENCES peers (nickname),
+    FOREIGN KEY (recommended_peer) REFERENCES peers (nickname)
 );
 
--- Создание таблицы XP
-CREATE TABLE XP (
-  ID INT PRIMARY KEY,
-  CheckID INT,
-  EarnedXP INT,
-  FOREIGN KEY (CheckID) REFERENCES Checks(ID)
+-- Заполнение таблицы recommendations
+INSERT INTO recommendations (id, peer, recommended_peer)
+VALUES (1, 'cherigra', 'manhunte'),
+       (2, 'manhunte', 'tamelabe'),
+       (3, 'nyarlath', 'cherigra'),
+       (4, 'tamelabe', 'yonnarge'),
+       (5, 'yonnarge', 'nyarlath');
+
+-- Создание таблицы xp
+CREATE TABLE xp
+(
+    id        serial primary key,
+    check_id  int,
+    xp_amount int,
+    FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 
--- Создание таблицы TimeTracking
-CREATE TABLE TimeTracking (
-  ID INT PRIMARY KEY,
-  PeerNickname VARCHAR(255),
-  Date DATE,
-  Time TIME,
-  State INT,
-  FOREIGN KEY (PeerNickname) REFERENCES Peers(PeerNickname)
+-- Заполнение таблицы xp
+INSERT INTO xp (id, check_id, xp_amount)
+VALUES (1, 1, 250),
+       (2, 2, 500),
+       (3, 3, 350),
+       (4, 4, 0),
+       (5, 5, 0);
+
+-- Создание таблицы time_tracking
+CREATE TABLE time_tracking
+(
+    id            serial primary key,
+    peer_nickname varchar(16),
+    date          date,
+    time          time,
+    state         int,
+    FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
+    CONSTRAINT ch_state CHECK ( state IN (1, 2) )
 );
 
--- Заполнение таблицы Peers
-INSERT INTO Peers (PeerNickname, Birthday)
-VALUES
-  ('peer1', '1990-01-01'),
-  ('peer2', '1992-05-10'),
-  ('peer3', '1988-12-15'),
-  ('peer4', '1995-03-22'),
-  ('peer5', '1991-09-07');
+-- Заполнение таблицы time_tracking
+INSERT INTO time_tracking (id, peer_nickname, date, time, state)
+VALUES (1, 'tamelabe', '2023-07-01', '08:00:00', 1),
+       (2, 'cherigra', '2023-07-01', '09:00:00', 1),
+       (3, 'cherigra', '2023-07-01', '10:00:00', 2),
+       (4, 'manhunte', '2023-07-01', '12:00:00', 1),
+       (5, 'manhunte', '2023-07-01', '17:00:00', 2),
+       (6, 'tamelabe', '2023-07-01', '18:00:00', 2);
 
--- Заполнение таблицы Tasks
-INSERT INTO Tasks (TaskName, EntryTaskName, MaxXP)
-VALUES
-  ('task1', NULL, 100),
-  ('task2', 'task1', 200),
-  ('task3', 'task1', 150),
-  ('task4', 'task2', 300),
-  ('task5', 'task3', 250);
 
--- Заполнение таблицы P2P
-INSERT INTO P2P (ID, CheckID, PeerNickname, P2PStatus, Time)
-VALUES
-  (1, 1, 'peer1', 'Start', '2023-07-01 10:00:00'),
-  (2, 1, 'peer2', 'Success', '2023-07-01 11:00:00'),
-  (3, 2, 'peer3', 'Start', '2023-07-02 09:00:00'),
-  (4, 2, 'peer4', 'Failure', '2023-07-02 10:30:00'),
-  (5, 3, 'peer5', 'Start', '2023-07-03 14:00:00');
-
--- Заполнение таблицы Verter
-INSERT INTO Verter (ID, CheckID, VerterStatus, Time)
-VALUES
-  (1, 1, 'Start', '2023-07-01 11:30:00'),
-  (2, 1, 'Success', '2023-07-01 12:00:00'),
-  (3, 2, 'Start', '2023-07-02 11:00:00'),
-  (4, 2, 'Failure', '2023-07-02 12:30:00'),
-  (5, 3, 'Start', '2023-07-03 15:00:00');
-
--- Заполнение таблицы Checks
-INSERT INTO Checks (ID, PeerNickname, TaskName, CheckDate)
-VALUES
-  (1, 'peer1', 'task1', '2023-07-01'),
-  (2, 'peer2', 'task2', '2023-07-02'),
-  (3, 'peer3', 'task3', '2023-07-03'),
-  (4, 'peer4', 'task4', '2023-07-04'),
-  (5, 'peer5', 'task5', '2023-07-05');
-
--- Заполнение таблицы TransferredPoints
-INSERT INTO TransferredPoints (ID, ReviewerPeerNickname, ReviewedPeerNickname, TotalPoints)
-VALUES
-  (1, 'peer1', 'peer2', 1),
-  (2, 'peer1', 'peer3', 2),
-  (3, 'peer2', 'peer4', 3),
-  (4, 'peer3', 'peer5', 4),
-  (5, 'peer4', 'peer5', 2);
-
--- Заполнение таблицы Friends
-INSERT INTO Friends (ID, Peer1Nickname, Peer2Nickname)
-VALUES
-  (1, 'peer1', 'peer2'),
-  (2, 'peer2', 'peer3'),
-  (3, 'peer3', 'peer4'),
-  (4, 'peer4', 'peer5'),
-  (5, 'peer5', 'peer1');
-
--- Заполнение таблицы Recommendations
-INSERT INTO Recommendations (ID, PeerNickname, RecommendedPeerNickname)
-VALUES
-  (1, 'peer1', 'peer3'),
-  (2, 'peer2', 'peer4'),
-  (3, 'peer3', 'peer5'),
-  (4, 'peer4', 'peer1'),
-  (5, 'peer5', 'peer2');
-
--- Заполнение таблицы XP
-INSERT INTO XP (ID, CheckID, EarnedXP)
-VALUES
-  (1, 1, 50),
-  (2, 2, 100),
-  (3, 3, 75),
-  (4, 4, 150),
-  (5, 5, 125);
-
--- Заполнение таблицы TimeTracking
-INSERT INTO TimeTracking (ID, PeerNickname, Date, Time, State)
-VALUES
-  (1, 'peer1', '2023-07-01', '08:00:00', 1),
-  (2, 'peer2', '2023-07-01', '09:00:00', 1),
-  (3, 'peer3', '2023-07-01', '10:00:00', 1),
-  (4, 'peer4', '2023-07-01', '11:00:00', 1),
-  (5, 'peer5', '2023-07-01', '12:00:00', 1);
-
-  -- Процедура импорта данных в таблицу Peers из файла CSV
-DELIMITER //
-
-CREATE PROCEDURE ImportPeers(IN fileName VARCHAR(255), IN delimiter CHAR(1))
-BEGIN
-  SET @query = CONCAT("LOAD DATA INFILE '", fileName, "' INTO TABLE Peers FIELDS TERMINATED BY '", delimiter, "' IGNORE 1 LINES;");
-  PREPARE stmt FROM @query;
-  EXECUTE stmt;
-  DEALLOCATE PREPARE stmt;
-END //
-
-DELIMITER ;
-
--- Процедура экспорта данных из таблицы Peers в файл CSV
-DELIMITER //
-
-CREATE PROCEDURE ExportPeers(IN fileName VARCHAR(255), IN delimiter CHAR(1))
-BEGIN
-  SET @query = CONCAT("SELECT * INTO OUTFILE '", fileName, "' FIELDS TERMINATED BY '", delimiter, "' FROM Peers;");
-  PREPARE stmt FROM @query;
-  EXECUTE stmt;
-  DEALLOCATE PREPARE stmt;
-END //
-
-DELIMITER ;
-
--- Аналогично создайте процедуры импорта и экспорта для каждой оставшейся таблицы
-
--- Процедура импорта данных в таблицу Tasks из файла CSV
-DELIMITER //
-
-CREATE PROCEDURE ImportTasks(IN fileName VARCHAR(255), IN delimiter CHAR(1))
-BEGIN
-  SET @query = CONCAT("LOAD DATA INFILE '", fileName, "' INTO TABLE Tasks FIELDS TERMINATED BY '", delimiter, "' IGNORE 1 LINES;");
-  PREPARE stmt FROM @query;
-  EXECUTE stmt;
-  DEALLOCATE PREPARE stmt;
-END //
-
-DELIMITER ;
-
--- Процедура экспорта данных из таблицы Tasks в файл CSV
-DELIMITER //
-
-CREATE PROCEDURE ExportTasks(IN fileName VARCHAR(255), IN delimiter CHAR(1))
-BEGIN
-  SET @query = CONCAT("SELECT * INTO OUTFILE '", fileName, "' FIELDS TERMINATED BY '", delimiter, "' FROM Tasks;");
-  PREPARE stmt FROM @query;
-  EXECUTE stmt;
-  DEALLOCATE PREPARE stmt;
-END //
-
-DELIMITER ;
+--   -- Процедура импорта данных в таблицу Peers из файла CSV
+-- DELIMITER //
+--
+-- CREATE PROCEDURE ImportPeers(IN fileName VARCHAR(255), IN delimiter CHAR(1))
+-- BEGIN
+--   SET @query = CONCAT("LOAD DATA INFILE '", fileName, "' INTO TABLE Peers FIELDS TERMINATED BY '", delimiter, "' IGNORE 1 LINES;");
+--   PREPARE stmt FROM @query;
+--   EXECUTE stmt;
+--   DEALLOCATE PREPARE stmt;
+-- END //
+--
+-- DELIMITER ;
+--
+-- -- Процедура экспорта данных из таблицы Peers в файл CSV
+-- DELIMITER //
+--
+-- CREATE PROCEDURE ExportPeers(IN fileName VARCHAR(255), IN delimiter CHAR(1))
+-- BEGIN
+--   SET @query = CONCAT("SELECT * INTO OUTFILE '", fileName, "' FIELDS TERMINATED BY '", delimiter, "' FROM Peers;");
+--   PREPARE stmt FROM @query;
+--   EXECUTE stmt;
+--   DEALLOCATE PREPARE stmt;
+-- END //
+--
+-- DELIMITER ;
+--
+-- -- Аналогично создайте процедуры импорта и экспорта для каждой оставшейся таблицы
+--
+-- -- Процедура импорта данных в таблицу Tasks из файла CSV
+-- DELIMITER //
+--
+-- CREATE PROCEDURE ImportTasks(IN fileName VARCHAR(255), IN delimiter CHAR(1))
+-- BEGIN
+--   SET @query = CONCAT("LOAD DATA INFILE '", fileName, "' INTO TABLE Tasks FIELDS TERMINATED BY '", delimiter, "' IGNORE 1 LINES;");
+--   PREPARE stmt FROM @query;
+--   EXECUTE stmt;
+--   DEALLOCATE PREPARE stmt;
+-- END //
+--
+-- DELIMITER ;
+--
+-- -- Процедура экспорта данных из таблицы Tasks в файл CSV
+-- DELIMITER //
+--
+-- CREATE PROCEDURE ExportTasks(IN fileName VARCHAR(255), IN delimiter CHAR(1))
+-- BEGIN
+--   SET @query = CONCAT("SELECT * INTO OUTFILE '", fileName, "' FIELDS TERMINATED BY '", delimiter, "' FROM Tasks;");
+--   PREPARE stmt FROM @query;
+--   EXECUTE stmt;
+--   DEALLOCATE PREPARE stmt;
+-- END //
+--
+-- DELIMITER ;
