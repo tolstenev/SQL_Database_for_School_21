@@ -2,13 +2,16 @@
 -- время проверки Verter'ом не может быть раньше, чем окончание проверки P2P
 -- проверка Verter'ом может ссылаться только на те проверки в таблице Checks, которые уже включают в себя успешную P2P проверку
 -- в таблице transferred_points количество points_amount должно быть неотрицательным
--- в таблице friends поля peer1 и peer2 для одной записи не могут совпадать
+-- [*] в таблице friends поля peer1 и peer2 для одной записи не могут совпадать
+-- [*] в таблице recommendations  поля peer и recommendet_peer не может быть одним человекрм
 -- в таблице recommendations рекомендовать можно только того, у кого был на проверке, то есть в поле peer можно добавлять записи checked_peer из transferred_points, а в recommended_peer можно добавлять только checking_peer соответствующего checked_peer
 -- количество xp в таблице xp не может превышать максимальное доступное для проверяемой задачи - поле max_xp из таблицы tasks
 -- поле check_id таблицы xp может ссылаться только на успешные проверки
 -- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
--- Создание таблицы peers
 
+CREATE DATABASE INFO_21;
+
+-- Создание таблицы peers
 CREATE TABLE peers (
     nickname varchar(16) primary key,
     birthday date
@@ -19,6 +22,7 @@ CREATE TABLE tasks (
     title varchar(32) primary key,
     parent_task varchar(32),
     max_xp int,
+    CHECK (max_xp >= 0),
     FOREIGN KEY (parent_task) REFERENCES tasks (title)
 );
 
@@ -70,6 +74,7 @@ CREATE TABLE friends (
     id serial primary key,
     peer1 varchar(16),
     peer2 varchar(16),
+    CHECK (peer1 != peer2),
     FOREIGN KEY (peer1) REFERENCES peers (nickname),
     FOREIGN KEY (peer2) REFERENCES peers (nickname)
 );
@@ -79,6 +84,7 @@ CREATE TABLE recommendations (
     id serial primary key,
     peer varchar(16),
     recommended_peer varchar(16),
+    CHECK (peer != recommended_peer),
     FOREIGN KEY (peer) REFERENCES peers (nickname),
     FOREIGN KEY (recommended_peer) REFERENCES peers (nickname)
 );
@@ -88,6 +94,7 @@ CREATE TABLE xp (
     id serial primary key,
     check_id int,
     xp_amount int,
+    CHECK (xp_amount >= 0),
     FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 
