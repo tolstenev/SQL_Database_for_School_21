@@ -1,13 +1,28 @@
 -- TODO: проверить все ограничения в таблицах
 -- время проверки Verter'ом не может быть раньше, чем окончание проверки P2P
 -- проверка Verter'ом может ссылаться только на те проверки в таблице Checks, которые уже включают в себя успешную P2P проверку
--- в таблице transferred_points количество points_amount должно быть неотрицательным
--- в таблице friends поля peer1 и peer2 для одной записи не могут совпадать
+-- [*] в таблице transferred_points количество points_amount должно быть неотрицательным
+-- [*] в таблице friends поля peer1 и peer2 для одной записи не могут совпадать
+-- [*] в таблице recommendations  поля peer и recommended_peer не может быть одним человекрм
 -- в таблице recommendations рекомендовать можно только того, у кого был на проверке, то есть в поле peer можно добавлять записи checked_peer из transferred_points, а в recommended_peer можно добавлять только checking_peer соответствующего checked_peer
--- количество xp в таблице xp не может превышать максимальное доступное для проверяемой задачи - поле max_xp из таблицы tasks
+-- [*] количество xp в таблице xp не может превышать максимальное доступное для проверяемой задачи - поле max_xp из таблицы tasks
 -- поле check_id таблицы xp может ссылаться только на успешные проверки
 -- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
 
+-- CREATE DATABASE info_21;
+
+-- Подключиться к созданной базе следует вручную
+-- psql -h хост -p порт -U пользователь -d имя_базы_данных
+-- где:
+-- хост - адрес сервера базы данных PostgreSQL
+-- порт - порт сервера базы данных PostgreSQL (обычно 5432)
+-- пользователь - имя пользователя базы данных
+-- имя_базы_данных - имя созданной базы данных
+
+CREATE SCHEMA IF NOT EXISTS public;
+
+DROP TABLE IF EXISTS peers, tasks, p2p, verter, checks, transferred_points, friends, recommendations, xp, time_tracking CASCADE;
+DROP TYPE IF EXISTS state_of_check;
 
 -- Создание таблицы peers
 CREATE TABLE peers
@@ -30,7 +45,8 @@ CREATE TABLE tasks
     title       varchar(32) primary key,
     parent_task varchar(32),
     max_xp      int,
-    FOREIGN KEY (parent_task) REFERENCES tasks (title)
+    CONSTRAINT ch_range_max_xp CHECK (max_xp >= 0),
+    CONSTRAINT fk_tasks_parent_task FOREIGN KEY (parent_task) REFERENCES tasks (title)
 );
 
 -- Заполнение таблицы tasks
@@ -42,8 +58,27 @@ VALUES ('Pool', NULL, 0),
        ('DO1_Linux', 'C3_s21_stringplus', 300),
        ('C6_s21_matrix', 'C5_s21_decimal', 200);
 
+-- Создание таблицы checks
+CREATE TABLE checks
+(
+    id   serial primary key,
+    peer varchar(16),
+    task varchar(32),
+    date date,
+    CONSTRAINT fk_checks_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
+    CONSTRAINT fk_checks_task FOREIGN KEY (task) REFERENCES tasks (title)
+);
+
+-- Заполнение таблицы checks
+INSERT INTO checks (id, peer, task, date)
+VALUES (1, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-01'),
+       (2, 'nyarlath', 'C3_s21_stringplus', '2023-07-02'),
+       (3, 'cherigra', 'C5_s21_decimal', '2023-07-03'),
+       (4, 'manhunte', 'DO1_Linux', '2023-07-04'),
+       (5, 'yonnarge', 'C6_s21_matrix', '2023-07-05');
+
 -- Создание типа перечисления для статуса проверки
-CREATE TYPE state_of_check AS ENUM ('Start', 'Success', 'Failure');
+CREATE TYPE state_of_check AS ENUM ('start', 'success', 'failure');
 
 -- Создание таблицы p2p
 CREATE TABLE p2p
@@ -53,8 +88,8 @@ CREATE TABLE p2p
     checking_peer varchar(16),
     state         state_of_check,
     time          timestamp,
-    FOREIGN KEY (check_id) REFERENCES checks (id),
-    FOREIGN KEY (checking_peer) REFERENCES peers (nickname)
+    CONSTRAINT fk_p2p_check_id FOREIGN KEY (check_id) REFERENCES checks (id),
+    CONSTRAINT fk_p2p_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname)
 );
 
 -- Заполнение таблицы p2p
@@ -77,7 +112,7 @@ CREATE TABLE verter
     check_id      int,
     verter_status state_of_check,
     time          timestamp,
-    FOREIGN KEY (check_id) REFERENCES checks (id)
+    CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 
 -- Заполнение таблицы verter
@@ -89,25 +124,6 @@ VALUES (1, 1, 'start', '2023-07-01 11:01:00'),
        (5, 5, 'start', '2023-07-05 22:01:11'),
        (6, 5, 'failure', '2023-07-05 22:02:23');
 
--- Создание таблицы checks
-CREATE TABLE checks
-(
-    id   serial primary key,
-    peer varchar(16),
-    task varchar(32),
-    date date,
-    FOREIGN KEY (peer) REFERENCES peers (nickname),
-    FOREIGN KEY (task) REFERENCES tasks (title)
-);
-
--- Заполнение таблицы checks
-INSERT INTO checks (id, peer, task, date)
-VALUES (1, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-01'),
-       (2, 'nyarlath', 'C3_s21_stringplus', '2023-07-02'),
-       (3, 'cherigra', 'C5_s21_decimal', '2023-07-03'),
-       (4, 'manhunte', 'DO1_Linux', '2023-07-04'),
-       (5, 'yonnarge', 'C6_s21_matrix', '2023-07-05');
-
 -- Создание таблицы transferred_points
 CREATE TABLE transferred_points
 (
@@ -115,8 +131,9 @@ CREATE TABLE transferred_points
     checking_peer varchar(16),
     checked_peer  varchar(16),
     points_amount int,
-    FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
-    FOREIGN KEY (checked_peer) REFERENCES peers (nickname)
+    CONSTRAINT ch_range_points_amount CHECK (points_amount >= 0),
+    CONSTRAINT fk_transferred_points_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
+    CONSTRAINT fk_transferred_points_checked_peer FOREIGN KEY (checked_peer) REFERENCES peers (nickname)
 );
 
 -- Заполнение таблицы transferred_points
@@ -133,8 +150,9 @@ CREATE TABLE friends
     id    serial primary key,
     peer1 varchar(16),
     peer2 varchar(16),
-    FOREIGN KEY (peer1) REFERENCES peers (nickname),
-    FOREIGN KEY (peer2) REFERENCES peers (nickname)
+    CONSTRAINT ch_friends_not_equal CHECK (peer1 != peer2),
+    CONSTRAINT fk_friends_peer1 FOREIGN KEY (peer1) REFERENCES peers (nickname),
+    CONSTRAINT fk_friends_peer2 FOREIGN KEY (peer2) REFERENCES peers (nickname)
 );
 
 -- Заполнение таблицы friends
@@ -151,8 +169,9 @@ CREATE TABLE recommendations
     id               serial primary key,
     peer             varchar(16),
     recommended_peer varchar(16),
-    FOREIGN KEY (peer) REFERENCES peers (nickname),
-    FOREIGN KEY (recommended_peer) REFERENCES peers (nickname)
+    CONSTRAINT ch_recommendations_not_equal CHECK (peer != recommended_peer),
+    CONSTRAINT fk_recommendations_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
+    CONSTRAINT fk_recommendations_recommended_peer FOREIGN KEY (recommended_peer) REFERENCES peers (nickname)
 );
 
 -- Заполнение таблицы recommendations
@@ -169,8 +188,40 @@ CREATE TABLE xp
     id        serial primary key,
     check_id  int,
     xp_amount int,
-    FOREIGN KEY (check_id) REFERENCES checks (id)
+    CONSTRAINT fk_xp_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
+
+-- Триггер для таблицы xp, который будет выполнять проверку, что значение xp_amount не превышает max_xp для соответствующей проверки в таблице checks:
+CREATE OR REPLACE FUNCTION check_xp_amount()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- Получаем max_xp для соответствующей проверки
+    DECLARE
+        max_xp_value INT;
+    BEGIN
+        SELECT max_xp
+        INTO max_xp_value
+        FROM tasks
+                 JOIN checks ON tasks.title = checks.task
+        WHERE checks.id = NEW.check_id;
+
+        -- Проверяем, что xp_amount не превышает max_xp
+        IF NEW.xp_amount > max_xp_value THEN
+            RAISE EXCEPTION 'xp_amount exceeds max_xp';
+        END IF;
+
+        RETURN NEW;
+    END;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Создаем триггер, который будет вызывать функцию check_xp_amount при вставке или обновлении значений в таблице xp
+CREATE TRIGGER xp_check_trigger
+    BEFORE INSERT OR UPDATE
+    ON xp
+    FOR EACH ROW
+EXECUTE FUNCTION check_xp_amount();
 
 -- Заполнение таблицы xp
 INSERT INTO xp (id, check_id, xp_amount)
@@ -188,7 +239,7 @@ CREATE TABLE time_tracking
     date          date,
     time          time,
     state         int,
-    FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
+    CONSTRAINT fk_time_tracking_peer_nickname FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
     CONSTRAINT ch_state CHECK ( state IN (1, 2) )
 );
 
@@ -201,57 +252,57 @@ VALUES (1, 'tamelabe', '2023-07-01', '08:00:00', 1),
        (5, 'manhunte', '2023-07-01', '17:00:00', 2),
        (6, 'tamelabe', '2023-07-01', '18:00:00', 2);
 
+-- Функция импорта данных из CSV файла в указанную таблицу
+CREATE OR REPLACE FUNCTION ImportTableFromCSV(
+    IN table_name TEXT,
+    IN delimiter CHAR,
+    IN file_path TEXT
+)
+    RETURNS VOID
+    LANGUAGE plpgsql
+AS
+$$
+BEGIN
+    EXECUTE format('COPY %I FROM %L WITH (FORMAT CSV, DELIMITER %L, HEADER)', table_name, file_path, delimiter);
+END;
+$$;
 
---   -- Процедура импорта данных в таблицу Peers из файла CSV
--- DELIMITER //
+-- Функция экспорта данных из указанной таблицы в CSV файл
+CREATE OR REPLACE FUNCTION ExportTableToCSV(
+    IN table_name TEXT,
+    IN delimiter CHAR,
+    IN file_path TEXT
+)
+    RETURNS VOID
+    LANGUAGE plpgsql
+AS
+$$
+BEGIN
+    EXECUTE format('COPY %I TO %L WITH (FORMAT CSV, DELIMITER %L, HEADER)', table_name, file_path, delimiter);
+END;
+$$;
+
+-- -- Импорт данных из CSV файла
+-- -- CALL ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/xp.csv');
+-- SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
+-- SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
+-- SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
+-- SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
+-- SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
+-- SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
+-- SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
+-- SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
+-- SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
+-- SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
 --
--- CREATE PROCEDURE ImportPeers(IN fileName VARCHAR(255), IN delimiter CHAR(1))
--- BEGIN
---   SET @query = CONCAT("LOAD DATA INFILE '", fileName, "' INTO TABLE Peers FIELDS TERMINATED BY '", delimiter, "' IGNORE 1 LINES;");
---   PREPARE stmt FROM @query;
---   EXECUTE stmt;
---   DEALLOCATE PREPARE stmt;
--- END //
---
--- DELIMITER ;
---
--- -- Процедура экспорта данных из таблицы Peers в файл CSV
--- DELIMITER //
---
--- CREATE PROCEDURE ExportPeers(IN fileName VARCHAR(255), IN delimiter CHAR(1))
--- BEGIN
---   SET @query = CONCAT("SELECT * INTO OUTFILE '", fileName, "' FIELDS TERMINATED BY '", delimiter, "' FROM Peers;");
---   PREPARE stmt FROM @query;
---   EXECUTE stmt;
---   DEALLOCATE PREPARE stmt;
--- END //
---
--- DELIMITER ;
---
--- -- Аналогично создайте процедуры импорта и экспорта для каждой оставшейся таблицы
---
--- -- Процедура импорта данных в таблицу Tasks из файла CSV
--- DELIMITER //
---
--- CREATE PROCEDURE ImportTasks(IN fileName VARCHAR(255), IN delimiter CHAR(1))
--- BEGIN
---   SET @query = CONCAT("LOAD DATA INFILE '", fileName, "' INTO TABLE Tasks FIELDS TERMINATED BY '", delimiter, "' IGNORE 1 LINES;");
---   PREPARE stmt FROM @query;
---   EXECUTE stmt;
---   DEALLOCATE PREPARE stmt;
--- END //
---
--- DELIMITER ;
---
--- -- Процедура экспорта данных из таблицы Tasks в файл CSV
--- DELIMITER //
---
--- CREATE PROCEDURE ExportTasks(IN fileName VARCHAR(255), IN delimiter CHAR(1))
--- BEGIN
---   SET @query = CONCAT("SELECT * INTO OUTFILE '", fileName, "' FIELDS TERMINATED BY '", delimiter, "' FROM Tasks;");
---   PREPARE stmt FROM @query;
---   EXECUTE stmt;
---   DEALLOCATE PREPARE stmt;
--- END //
---
--- DELIMITER ;
+-- -- Экспорт данных в CSV файл
+-- SELECT ExportTableToCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
+-- SELECT ExportTableToCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
+-- SELECT ExportTableToCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
+-- SELECT ExportTableToCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
+-- SELECT ExportTableToCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
+-- SELECT ExportTableToCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
+-- SELECT ExportTableToCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
+-- SELECT ExportTableToCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
+-- SELECT ExportTableToCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
+-- SELECT ExportTableToCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
