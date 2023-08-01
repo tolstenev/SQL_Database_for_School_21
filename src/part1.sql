@@ -1,13 +1,19 @@
 -- TODO: проверить все ограничения в таблицах
 -- [*] время проверки Verter'ом не может быть раньше, чем окончание проверки P2P
--- проверка Verter'ом может ссылаться только на те проверки в таблице Checks, которые уже включают в себя успешную P2P проверку
+-- [*] проверка Verter'ом может ссылаться только на те проверки в таблице Checks, которые уже включают в себя успешную P2P проверку
 -- [*] в таблице transferred_points количество points_amount должно быть неотрицательным
 -- [*] в таблице friends поля peer1 и peer2 для одной записи не могут совпадать
 -- [*] в таблице recommendations  поля peer и recommended_peer не может быть одним человекрм
 -- в таблице recommendations рекомендовать можно только того, у кого был на проверке, то есть в поле peer можно добавлять записи checked_peer из transferred_points, а в recommended_peer можно добавлять только checking_peer соответствующего checked_peer
 -- [*] количество xp в таблице xp не может превышать максимальное доступное для проверяемой задачи - поле max_xp из таблицы tasks
--- поле check_id таблицы xp может ссылаться только на успешные проверки
+-- [*] поле id таблицы xp может ссылаться только на успешные проверки (Проверка считается успешной, если соответствующий P2P этап успешен, а этап Verter успешен, либо отсутствует)
 -- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
+-- p2p и verter происходят в один день, (дата в checks)
+-- в таблицу check возможно добавить проверку задания пира, только если в ней есть успешная проверка предыдущего задания (выполнено условие входа) (придётся много править и добавлять всем предыдущие проверки заданий или просто добавить такой функционал, а все пиры сдают первый проект). Добавить условие, что мы не добавляем Pool. Pool без родителя.
+
+-- TODO: задачи
+-- проверить ограничения таска с описанными выше - есть ли запись? Если записи нет, возможно уже реализовано.
+-- создать и добавить 2 успешные проверки в таблицу xp
 
 -- CREATE DATABASE info_21;
 
@@ -65,6 +71,7 @@ CREATE TABLE checks
     peer varchar(16),
     task varchar(32),
     date date,
+    CONSTRAINT ch_checks_current_date CHECK ( date <= current_date ),
     CONSTRAINT fk_checks_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
     CONSTRAINT fk_checks_task FOREIGN KEY (task) REFERENCES tasks (title)
 );
@@ -75,7 +82,8 @@ VALUES (1, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-01'),
        (2, 'nyarlath', 'C3_s21_stringplus', '2023-07-02'),
        (3, 'cherigra', 'C5_s21_decimal', '2023-07-03'),
        (4, 'manhunte', 'DO1_Linux', '2023-07-04'),
-       (5, 'yonnarge', 'C6_s21_matrix', '2023-07-05');
+       (5, 'yonnarge', 'C6_s21_matrix', '2023-07-05'),
+       (6, 'nyarlath', 'DO1_Linux', '2023-07-06');
 
 -- Создание типа перечисления для статуса проверки
 CREATE TYPE state_of_check AS ENUM ('start', 'success', 'failure');
@@ -88,6 +96,7 @@ CREATE TABLE p2p
     checking_peer varchar(16),
     state         state_of_check,
     time          timestamp,
+    CONSTRAINT ch_p2p_current_time CHECK ( time <= current_timestamp ),
     CONSTRAINT fk_p2p_check_id FOREIGN KEY (check_id) REFERENCES checks (id),
     CONSTRAINT fk_p2p_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname)
 );
@@ -103,7 +112,9 @@ VALUES (1, 1, 'yonnarge', 'start', '2023-07-01 10:00:00'),
        (7, 4, 'tamelabe', 'start', '2023-07-04 09:00:00'),
        (8, 4, 'tamelabe', 'success', '2023-07-04 10:30:00'),
        (9, 5, 'nyarlath', 'start', '2023-07-05 21:30:00'),
-       (10, 5, 'nyarlath', 'success', '2023-07-05 22:00:00');
+       (10, 5, 'nyarlath', 'success', '2023-07-05 22:00:00'),
+       (11, 6, 'manhunte', 'start', '2023-07-06 14:30:00'),
+       (12, 6, 'manhunte', 'success', '2023-07-06 15:30:00');
 
 -- Создание таблицы verter
 CREATE TABLE verter
@@ -112,6 +123,7 @@ CREATE TABLE verter
     check_id      int,
     verter_status state_of_check,
     time          timestamp,
+    CONSTRAINT ch_verter_current_time CHECK ( time <= current_timestamp ),
     CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 
@@ -119,7 +131,7 @@ CREATE OR REPLACE FUNCTION check_verter_time()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    -- Проверяем, что время проверки Verter'ом не раньше, чем окончание проверки P2P
+    -- Проверка, что время проверки Verter'ом не раньше, чем окончание проверки P2P
     IF EXISTS(
         -- Запрашиваем только одну строку с единственным значением 1.
         -- Это делается для оптимизации запроса, поскольку нам не нужны фактические данные из таблицы,
@@ -136,12 +148,36 @@ BEGIN
 END ;
 $$ LANGUAGE plpgsql;
 
--- Создание триггера на таблице verter
 CREATE TRIGGER check_verter_time_trigger
     BEFORE INSERT OR UPDATE
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_verter_time();
+
+CREATE OR REPLACE FUNCTION check_success_p2p()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- Проверка, что можно ссылаться только на успешные P2P проверки
+    IF NOT EXISTS(
+            SELECT 1
+            FROM checks
+                     JOIN p2p ON checks.id = p2p.check_id
+            WHERE checks.id = NEW.check_id
+              AND p2p.state = 'success'
+        ) THEN
+        RAISE EXCEPTION 'you can only refer to successful p2p checks';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verter_check_success_p2p_trigger
+    BEFORE INSERT OR UPDATE
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_success_p2p();
 
 -- Заполнение таблицы verter
 INSERT INTO verter (id, check_id, verter_status, time)
@@ -170,7 +206,8 @@ VALUES (1, 'yonnarge', 'tamelabe', 1),
        (2, 'cherigra', 'nyarlath', 1),
        (3, 'manhunte', 'cherigra', 1),
        (4, 'tamelabe', 'manhunte', 1),
-       (5, 'nyarlath', 'yonnarge', 1);
+       (5, 'nyarlath', 'yonnarge', 1),
+       (6, 'manhunte', 'nyarlath', 1);
 
 -- Создание таблицы friends
 CREATE TABLE friends
@@ -216,15 +253,15 @@ CREATE TABLE xp
     id        serial primary key,
     check_id  int,
     xp_amount int,
+    CONSTRAINT ch_xp_amount_range CHECK (xp_amount >= 0),
     CONSTRAINT fk_xp_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 
--- Триггер для таблицы xp, который будет выполнять проверку, что значение xp_amount не превышает max_xp для соответствующей проверки в таблице checks:
+-- Функция для таблицы xp, которая будет выполнять проверку, что значение xp_amount не превышает max_xp для соответствующей проверки в таблице checks:
 CREATE OR REPLACE FUNCTION check_xp_amount()
     RETURNS TRIGGER AS
 $$
 BEGIN
-    -- Получаем max_xp для соответствующей проверки
     DECLARE
         max_xp_value INT;
     BEGIN
@@ -234,7 +271,7 @@ BEGIN
                  JOIN checks ON tasks.title = checks.task
         WHERE checks.id = NEW.check_id;
 
-        -- Проверяем, что xp_amount не превышает max_xp
+        -- Проверка, что xp_amount не превышает max_xp
         IF NEW.xp_amount > max_xp_value THEN
             RAISE EXCEPTION 'xp_amount exceeds max_xp';
         END IF;
@@ -244,20 +281,60 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Создаем триггер, который будет вызывать функцию check_xp_amount при вставке или обновлении значений в таблице xp
+-- Функция для таблицы xp, которая проверяет, что проверка Verter'ом является успешной или отсутствует:
+CREATE OR REPLACE FUNCTION check_success_verter()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    verter_check_success BOOLEAN;
+    verter_check_exists  BOOLEAN;
+BEGIN
+    SELECT EXISTS(
+                   SELECT 1
+                   FROM verter
+                   WHERE check_id = NEW.check_id
+               )
+    INTO verter_check_exists;
+
+    SELECT EXISTS(
+                   SELECT 1
+                   FROM verter
+                   WHERE check_id = NEW.check_id
+                     AND verter_status = 'success'
+               )
+    INTO verter_check_success;
+
+    IF (NOT verter_check_exists) AND verter_check_success THEN
+        RAISE EXCEPTION 'there are not successful verter check';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
 CREATE TRIGGER xp_check_trigger
     BEFORE INSERT OR UPDATE
     ON xp
     FOR EACH ROW
 EXECUTE FUNCTION check_xp_amount();
 
+CREATE TRIGGER xp_check_success_p2p
+    BEFORE INSERT OR UPDATE
+    ON xp
+    FOR EACH ROW
+EXECUTE FUNCTION check_success_p2p();
+
+CREATE TRIGGER xp_check_success_verter
+    BEFORE INSERT OR UPDATE
+    ON xp
+    FOR EACH ROW
+EXECUTE FUNCTION check_success_verter();
+
 -- Заполнение таблицы xp
 INSERT INTO xp (id, check_id, xp_amount)
 VALUES (1, 1, 250),
        (2, 2, 500),
-       (3, 3, 350),
-       (4, 4, 0),
-       (5, 5, 0);
+       (6, 6, 300);
 
 -- Создание таблицы time_tracking
 CREATE TABLE time_tracking
@@ -334,3 +411,4 @@ $$;
 -- SELECT ExportTableToCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
 -- SELECT ExportTableToCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
 -- SELECT ExportTableToCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
+
