@@ -1,5 +1,5 @@
 -- TODO: проверить все ограничения в таблицах
--- время проверки Verter'ом не может быть раньше, чем окончание проверки P2P
+-- [*] время проверки Verter'ом не может быть раньше, чем окончание проверки P2P
 -- проверка Verter'ом может ссылаться только на те проверки в таблице Checks, которые уже включают в себя успешную P2P проверку
 -- [*] в таблице transferred_points количество points_amount должно быть неотрицательным
 -- [*] в таблице friends поля peer1 и peer2 для одной записи не могут совпадать
@@ -114,6 +114,34 @@ CREATE TABLE verter
     time          timestamp,
     CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
+
+CREATE OR REPLACE FUNCTION check_verter_time()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- Проверяем, что время проверки Verter'ом не раньше, чем окончание проверки P2P
+    IF EXISTS(
+        -- Запрашиваем только одну строку с единственным значением 1.
+        -- Это делается для оптимизации запроса, поскольку нам не нужны фактические данные из таблицы,
+        -- нам нужно только узнать, есть ли хотя бы одна запись, удовлетворяющая условию.
+            SELECT 1
+            FROM p2p
+            WHERE p2p.check_id = NEW.check_id
+              AND p2p.time > NEW.time
+        ) THEN
+        RAISE EXCEPTION 'verter checking time cannot be earlier than p2p checking time';
+    END IF;
+
+    RETURN NEW;
+END ;
+$$ LANGUAGE plpgsql;
+
+-- Создание триггера на таблице verter
+CREATE TRIGGER check_verter_time_trigger
+    BEFORE INSERT OR UPDATE
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_verter_time();
 
 -- Заполнение таблицы verter
 INSERT INTO verter (id, check_id, verter_status, time)
