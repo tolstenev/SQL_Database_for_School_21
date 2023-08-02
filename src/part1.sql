@@ -123,7 +123,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER check_xp_completed_trigger
-AFTER INSERT ON checks
+AFTER INSERT OR UPDATE ON checks
 FOR EACH ROW
 EXECUTE FUNCTION check_parent_task_in_xp();
 
