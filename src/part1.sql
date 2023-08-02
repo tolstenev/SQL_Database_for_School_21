@@ -1,29 +1,10 @@
 -- TODO: проверить все ограничения в таблицах
 -- в таблице recommendations рекомендовать можно только того, у кого был на проверке, то есть в поле peer можно добавлять записи checked_peer из transferred_points, а в recommended_peer можно добавлять только checking_peer соответствующего checked_peer
 -- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
--- p2p и verter происходят в один день, (дата в checks)
--- в таблицу check возможно добавить проверку задания пира, только если в ней есть успешная проверка предыдущего задания (выполнено условие входа) Добавить условие, что мы не добавляем Pool. Pool без родителя.
 
--- Проверить:
--- В таблицу P2P и Verter можно добавить  запись со статусом Failure раньше чем запись со статусом Start. Это не логично.
--- В таблицу P2P и Verter можно добавить 2 записи. Одну со статусом Failure, а другую со статусом Success.
--- В таблицу P2P и Verter можно добавить запись с записью Failure или Success, у которой время раньше чем у записи со статусом Start.
--- Нумерация в таблицах P2P и Verter  происходит не порядку. Допустим в таблице при внесении данных произошла автоматическая нумерация после 16, сразу 18, а потом 20.
-
--- ПРОВЕРКИ НА УНИКАЛЬНОСТЬ И ЛОГИКУ:
-
--- для таблицы p2p
-
--- для таблицы verter:
--- если в таблице verter есть запись со статусом start, нельзя добавить запись со временем более ранним, чем у записи со статусом start
-
--- для таблицы time_tracking
--- ?
-
--- TODO: задачи
--- проверить ограничения таска с описанными выше - есть ли запись? Если записи нет, возможно уже реализовано.
--- создать и добавить 2 успешные проверки в таблицу xp
-
+-- Задачи:
+-- добавить тестовые инсерты на проверку ограничений и триггеров
+-- добавить комментарии
 
 -- CREATE DATABASE info_21;
 
@@ -65,11 +46,11 @@ CREATE TABLE tasks
 -- Создание таблицы checks
 CREATE TABLE checks
 (
-    id   serial primary key,
-    peer varchar(16),
-    task varchar(32),
-    date date,
-    CONSTRAINT ch_checks_current_date CHECK (date <= current_date),
+    id         serial primary key,
+    peer       varchar(16),
+    task       varchar(32),
+    date_check date,
+    CONSTRAINT ch_checks_current_date CHECK (date_check <= current_date),
     CONSTRAINT fk_checks_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
     CONSTRAINT fk_checks_task FOREIGN KEY (task) REFERENCES tasks (title)
 );
@@ -83,12 +64,12 @@ CREATE TABLE p2p
     id            serial primary key,
     check_id      int not null,
     checking_peer varchar(16),
-    state         state_of_check,
-    time          timestamp,
-    CONSTRAINT ch_p2p_current_time CHECK (time <= current_timestamp),
+    state_check   state_of_check,
+    time_check    timestamp,
+    CONSTRAINT ch_p2p_current_time CHECK (time_check <= current_timestamp),
     CONSTRAINT fk_p2p_check_id FOREIGN KEY (check_id) REFERENCES checks (id),
     CONSTRAINT fk_p2p_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
-    CONSTRAINT unique_p2p UNIQUE (check_id, state)
+    CONSTRAINT unique_p2p UNIQUE (check_id, state_check)
 );
 
 CREATE OR REPLACE FUNCTION check_state_first_record_in_p2p()
@@ -123,8 +104,8 @@ BEGIN
     IF EXISTS(
             SELECT 1
             FROM p2p
-            WHERE state = 'start'
-              AND NEW.time <= time
+            WHERE state_check = 'start'
+              AND NEW.time <= time_check
         ) THEN
         RAISE EXCEPTION 'invalid time for the new p2p record';
     END IF;
@@ -142,13 +123,36 @@ EXECUTE FUNCTION check_time_second_record_in_p2p();
 -- Создание таблицы verter
 CREATE TABLE verter
 (
-    id       serial primary key,
-    check_id int,
-    state    state_of_check,
-    time     timestamp,
-    CONSTRAINT ch_verter_current_time CHECK (time <= current_timestamp),
+    id          serial primary key,
+    check_id    int,
+    state_check state_of_check,
+    time_check  timestamp,
+    CONSTRAINT ch_verter_current_time CHECK (time_check <= current_timestamp),
     CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
+
+CREATE OR REPLACE FUNCTION check_verter_date()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+            SELECT 1
+            FROM checks
+            WHERE id = NEW.check_id
+              AND date_check != NEW.time_check::date
+        ) THEN
+        RAISE EXCEPTION 'the record must have the same date in checks table';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_check_verter_date
+    BEFORE INSERT
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_verter_date();
 
 CREATE OR REPLACE FUNCTION check_state_first_record_in_verter()
     RETURNS TRIGGER AS
@@ -182,8 +186,8 @@ BEGIN
     IF EXISTS(
             SELECT 1
             FROM verter
-            WHERE state = 'start'
-              AND NEW.time <= time
+            WHERE state_check = 'start'
+              AND NEW.time <= time_check
         ) THEN
         RAISE EXCEPTION 'invalid time for the new verter table record';
     END IF;
@@ -228,8 +232,8 @@ CREATE TABLE friends
 -- -- Проверка на запрет дружбы с самим собой
 -- INSERT INTO friends (id, peer1, peer2)
 -- VALUES (7, 'manhunte', 'manhunte');
--- Создание таблицы recommendations
 
+-- Создание таблицы recommendations
 CREATE TABLE recommendations
 (
     id               serial primary key,
@@ -240,6 +244,29 @@ CREATE TABLE recommendations
     CONSTRAINT fk_recommendations_recommended_peer FOREIGN KEY (recommended_peer) REFERENCES peers (nickname),
     CONSTRAINT unique_recommendations UNIQUE (peer, recommended_peer)
 );
+
+CREATE OR REPLACE FUNCTION check_recommendation()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+            SELECT 1
+            FROM transferred_points
+            WHERE checked_peer = NEW.peer
+              AND checking_peer = NEW.recommended_peer
+        ) THEN
+        RETURN NEW;
+    ELSE
+        RAISE EXCEPTION 'invalid recommendation: recommended_peer must be a checking_peer of the corresponding checked_peer';
+    END IF;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_check_recommendation
+    BEFORE INSERT
+    ON recommendations
+    FOR EACH ROW
+EXECUTE FUNCTION check_recommendation();
 
 -- -- Проверка на запрет дублирования в таблице recommendations
 -- INSERT INTO recommendations (id, peer, recommended_peer)
