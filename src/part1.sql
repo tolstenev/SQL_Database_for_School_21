@@ -38,6 +38,8 @@
 -- для таблицы recommendations
 -- если дружба уже существует, то нельзя добавить дубль
 
+-- нельзя передать поинт самому себе
+
 -- для таблицы time_tracking
 -- ?
 
@@ -146,6 +148,32 @@ VALUES (1, 1, 'yonnarge', 'start', '2023-07-01 10:00:00'),
        (11, 6, 'manhunte', 'start', '2023-07-06 14:30:00'),
        (12, 6, 'manhunte', 'success', '2023-07-06 15:30:00');
 
+
+CREATE OR REPLACE FUNCTION p2p_check_two_notes()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    count_records INTEGER;
+BEGIN
+    SELECT COUNT(*)
+    INTO count_records
+    FROM p2p
+    WHERE check_id = NEW.check_id;
+
+    IF count_records >= 2 THEN
+        RAISE EXCEPTION 'maximum number of records with the same check_id reached';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER p2p_check_two_notes_trigger
+    BEFORE INSERT OR UPDATE
+    ON p2p
+    FOR EACH ROW
+EXECUTE FUNCTION p2p_check_two_notes();
+
 -- Создание таблицы verter
 CREATE TABLE verter
 (
@@ -208,6 +236,31 @@ CREATE TRIGGER verter_check_success_p2p_trigger
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_success_p2p();
+
+CREATE OR REPLACE FUNCTION verter_check_two_notes()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    count_records INTEGER;
+BEGIN
+    SELECT COUNT(*)
+    INTO count_records
+    FROM verter
+    WHERE check_id = NEW.check_id;
+
+    IF count_records >= 2 THEN
+        RAISE EXCEPTION 'maximum number of records with the same check_id reached';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verter_check_two_notes_trigger
+    BEFORE INSERT OR UPDATE
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION verter_check_two_notes();
 
 -- Заполнение таблицы verter
 INSERT INTO verter (id, check_id, state, time)
