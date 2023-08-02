@@ -9,6 +9,8 @@
 -- поле check_id таблицы xp может ссылаться только на успешные проверки
 -- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
 
+
+
 CREATE DATABASE INFO_21;
 
 -- Создание таблицы peers
@@ -42,21 +44,23 @@ CREATE TYPE state_of_check AS ENUM ('start', 'success', 'failure');
 -- Создание таблицы p2p
 CREATE TABLE p2p (
     id serial primary key,
-    check_id int,
+    check_id int not null,
     checking_peer varchar(16),
     state state_of_check,
     time timestamp,
     FOREIGN KEY (check_id) REFERENCES checks (id),
-    FOREIGN KEY (checking_peer) REFERENCES peers (nickname)
+    FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
+    CONSTRAINT unique_p2p UNIQUE (check_id, state)
 );
 
 -- Создание таблицы verter
 CREATE TABLE verter (
     id serial primary key,
     check_id int,
-    verter_status state_of_check,
+    state state_of_check,
     time timestamp,
-    FOREIGN KEY (check_id) REFERENCES checks (id)
+    FOREIGN KEY (check_id) REFERENCES checks (id),
+    CONSTRAINT unique_verter UNIQUE (check_id, state)
 );
 
 -- Создание таблицы transferred_points
@@ -65,6 +69,7 @@ CREATE TABLE transferred_points (
     checking_peer varchar(16),
     checked_peer varchar(16),
     points_amount int,
+    CHECK (checking_peer != checked_peer),
     FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
     FOREIGN KEY (checked_peer) REFERENCES peers (nickname)
 );
@@ -77,6 +82,7 @@ CREATE TABLE friends (
     CHECK (peer1 != peer2),
     FOREIGN KEY (peer1) REFERENCES peers (nickname),
     FOREIGN KEY (peer2) REFERENCES peers (nickname)
+    CONSTRAINT unique_friends UNIQUE (peer1, peer2)
 );
 
 -- Создание таблицы recommendations
@@ -87,6 +93,7 @@ CREATE TABLE recommendations (
     CHECK (peer != recommended_peer),
     FOREIGN KEY (peer) REFERENCES peers (nickname),
     FOREIGN KEY (recommended_peer) REFERENCES peers (nickname)
+    CONSTRAINT unique_recommendations UNIQUE (peer, recommended_peer)
 );
 
 -- Создание таблицы xp
@@ -132,6 +139,8 @@ CREATE TRIGGER check_xp_completed_trigger
 AFTER INSERT ON checks
 FOR EACH ROW
 EXECUTE FUNCTION check_parent_task_in_xp();
+
+
     
 -- Функция импорта данных из CSV файла в указанную таблицу
 CREATE OR REPLACE FUNCTION ImportTableFromCSV(
