@@ -9,7 +9,37 @@
 -- [*] поле id таблицы xp может ссылаться только на успешные проверки (Проверка считается успешной, если соответствующий P2P этап успешен, а этап Verter успешен, либо отсутствует)
 -- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
 -- p2p и verter происходят в один день, (дата в checks)
--- в таблицу check возможно добавить проверку задания пира, только если в ней есть успешная проверка предыдущего задания (выполнено условие входа) (придётся много править и добавлять всем предыдущие проверки заданий или просто добавить такой функционал, а все пиры сдают первый проект). Добавить условие, что мы не добавляем Pool. Pool без родителя.
+-- в таблицу check возможно добавить проверку задания пира, только если в ней есть успешная проверка предыдущего задания (выполнено условие входа) Добавить условие, что мы не добавляем Pool. Pool без родителя.
+
+-- Проверить:
+-- В таблицу P2P и Verter можно добавить  запись со статусом Failure раньше чем запись со статусом Start. Это не логично.
+-- В таблицу P2P и Verter можно добавить 2 записи. Одну со статусом Failure, а другую со статусом Success.
+-- В таблицу P2P и Verter можно добавить запись с записью Failure или Success, у которой время раньше чем у записи со статусом Start.
+-- Нумерация в таблицах P2P и Verter  происходит не порядку. Допустим в таблице при внесении данных произошла автоматическая нумерация после 16, сразу 18, а потом 20.
+
+-- ПРОВЕРКИ НА УНИКАЛЬНОСТЬ И ЛОГИКУ:
+
+-- для таблицы p2p
+-- если в таблице p2p нет записей для проверки, то добавляемая запись должна быть со статусом start
+-- если в таблице p2p есть запись со статусом start, нельзя добавить запись со временем более ранним, чем у записи со статусом start
+-- если в таблице p2p есть запись со статусом start, то добавляемая запись должна быть со статусом success или failure
+-- если в таблице p2p есть запись со статусом success или failure, нельзя добавить новую запись
+
+-- для таблицы verter:
+-- если в таблице verter нет записей для проверки, то добавляемая запись должна иметь статус success в p2p
+-- если в таблице verter нет записей для проверки, то добавляемая запись должна быть со статусом start
+-- если в таблице verter есть запись со статусом start, нельзя добавить запись со временем более ранним, чем у записи со статусом start
+-- если в таблице verter есть запись со статусом start, то добавляемая запись должна быть со статусом success или failure
+-- если в таблице verter есть запись со статусом success или failure, нельзя добавить новую запись
+
+-- для таблицы friends
+-- если дружба уже существует, то нельзя добавить дубль
+
+-- для таблицы recommendations
+-- если дружба уже существует, то нельзя добавить дубль
+
+-- для таблицы time_tracking
+-- ?
 
 -- TODO: задачи
 -- проверить ограничения таска с описанными выше - есть ли запись? Если записи нет, возможно уже реализовано.
@@ -41,9 +71,9 @@ CREATE TABLE peers
 INSERT INTO peers (nickname, birthday)
 VALUES ('yonnarge', '1997-10-07'),
        ('nyarlath', '2004-09-14'),
-       ('cherigra', '1988-12-15'),
+       ('cherigra', NULL),
        ('tamelabe', '1996-08-11'),
-       ('manhunte', '1991-09-07');
+       ('manhunte', NULL);
 
 -- Создание таблицы tasks
 CREATE TABLE tasks
@@ -119,10 +149,10 @@ VALUES (1, 1, 'yonnarge', 'start', '2023-07-01 10:00:00'),
 -- Создание таблицы verter
 CREATE TABLE verter
 (
-    id            serial primary key,
-    check_id      int,
-    verter_status state_of_check,
-    time          timestamp,
+    id       serial primary key,
+    check_id int,
+    state    state_of_check,
+    time     timestamp,
     CONSTRAINT ch_verter_current_time CHECK ( time <= current_timestamp ),
     CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
@@ -180,7 +210,7 @@ CREATE TRIGGER verter_check_success_p2p_trigger
 EXECUTE FUNCTION check_success_p2p();
 
 -- Заполнение таблицы verter
-INSERT INTO verter (id, check_id, verter_status, time)
+INSERT INTO verter (id, check_id, state, time)
 VALUES (1, 1, 'start', '2023-07-01 11:01:00'),
        (2, 1, 'success', '2023-07-01 11:02:00'),
        (3, 2, 'start', '2023-07-02 10:31:00'),
@@ -215,10 +245,34 @@ CREATE TABLE friends
     id    serial primary key,
     peer1 varchar(16),
     peer2 varchar(16),
-    CONSTRAINT ch_friends_not_equal CHECK (peer1 != peer2),
+    CONSTRAINT ch_prevent_self_friend CHECK (peer1 != peer2),
     CONSTRAINT fk_friends_peer1 FOREIGN KEY (peer1) REFERENCES peers (nickname),
     CONSTRAINT fk_friends_peer2 FOREIGN KEY (peer2) REFERENCES peers (nickname)
 );
+
+-- Проверяет дублирующие записи в таблице friends
+CREATE OR REPLACE FUNCTION prevent_duplicate_friends()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+            SELECT 1
+            FROM friends
+            WHERE (peer1 = NEW.peer1 AND peer2 = NEW.peer2)
+        ) THEN
+        RAISE EXCEPTION 'duplicate_friendship_is_not_allowed';
+    END IF;
+    RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- Предотвращает дублирующие записи в таблице friends
+CREATE TRIGGER check_duplicate_friends
+    BEFORE INSERT
+    ON friends
+    FOR EACH ROW
+EXECUTE FUNCTION prevent_duplicate_friends();
 
 -- Заполнение таблицы friends
 INSERT INTO friends (id, peer1, peer2)
@@ -228,16 +282,49 @@ VALUES (1, 'manhunte', 'cherigra'),
        (4, 'yonnarge', 'nyarlath'),
        (5, 'cherigra', 'nyarlath');
 
+-- -- Проверка на запрет дублирования в таблице friends
+-- INSERT INTO friends (id, peer1, peer2)
+-- VALUES (6, 'manhunte', 'cherigra');
+
+-- -- Проверка на запрет дружбы с самим собой
+-- INSERT INTO friends (id, peer1, peer2)
+-- VALUES (7, 'manhunte', 'manhunte');
+
 -- Создание таблицы recommendations
 CREATE TABLE recommendations
 (
     id               serial primary key,
     peer             varchar(16),
     recommended_peer varchar(16),
-    CONSTRAINT ch_recommendations_not_equal CHECK (peer != recommended_peer),
+    CONSTRAINT ch_prevent_self_recommendation CHECK (peer != recommended_peer),
     CONSTRAINT fk_recommendations_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
     CONSTRAINT fk_recommendations_recommended_peer FOREIGN KEY (recommended_peer) REFERENCES peers (nickname)
 );
+
+-- Проверяет дублирующие записи в таблице recommendations
+CREATE OR REPLACE FUNCTION prevent_duplicate_recommendations()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+            SELECT 1
+            FROM recommendations
+            WHERE peer = NEW.peer
+              AND recommended_peer = NEW.recommended_peer
+        ) THEN
+        RAISE EXCEPTION 'Duplicate recommendation is not allowed';
+    END IF;
+    RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+
+-- Предотвращает дублирующие записи в таблице recommendations
+CREATE TRIGGER check_duplicate_recommendations
+    BEFORE INSERT
+    ON recommendations
+    FOR EACH ROW
+EXECUTE FUNCTION prevent_duplicate_recommendations();
 
 -- Заполнение таблицы recommendations
 INSERT INTO recommendations (id, peer, recommended_peer)
@@ -246,6 +333,14 @@ VALUES (1, 'cherigra', 'manhunte'),
        (3, 'nyarlath', 'cherigra'),
        (4, 'tamelabe', 'yonnarge'),
        (5, 'yonnarge', 'nyarlath');
+
+-- -- Проверка на запрет дублирования в таблице recommendations
+-- INSERT INTO recommendations (id, peer, recommended_peer)
+-- VALUES (6, 'cherigra', 'manhunte');
+
+-- -- Проверка на запрет дружбы с самим recommendations
+-- INSERT INTO recommendations (id, peer, recommended_peer)
+-- VALUES (7, 'manhunte', 'manhunte');
 
 -- Создание таблицы xp
 CREATE TABLE xp
@@ -257,7 +352,7 @@ CREATE TABLE xp
     CONSTRAINT fk_xp_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 
--- Функция для таблицы xp, которая будет выполнять проверку, что значение xp_amount не превышает max_xp для соответствующей проверки в таблице checks:
+-- Проверяет, что значение xp_amount не превышает max_xp для соответствующего задания:
 CREATE OR REPLACE FUNCTION check_xp_amount()
     RETURNS TRIGGER AS
 $$
@@ -300,7 +395,7 @@ BEGIN
                    SELECT 1
                    FROM verter
                    WHERE check_id = NEW.check_id
-                     AND verter_status = 'success'
+                     AND state = 'success'
                )
     INTO verter_check_success;
 
@@ -312,18 +407,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE TRIGGER xp_check_trigger
+-- Проверяет, не превышает ли добавляемое значение xp максимально возможное для данного задания
+-- перед добавлением/изменением в таблице xp
+CREATE TRIGGER xp_check_xp_amount_trigger
     BEFORE INSERT OR UPDATE
     ON xp
     FOR EACH ROW
 EXECUTE FUNCTION check_xp_amount();
 
+-- Проверяет есть ли успешная проверка p2p задания
+-- перед добавлением/изменением в таблице xp
 CREATE TRIGGER xp_check_success_p2p
     BEFORE INSERT OR UPDATE
     ON xp
     FOR EACH ROW
 EXECUTE FUNCTION check_success_p2p();
 
+-- Проверяет есть ли успешная проверка verter'ом задания
+-- перед добавлением/изменением в таблице xp
 CREATE TRIGGER xp_check_success_verter
     BEFORE INSERT OR UPDATE
     ON xp
