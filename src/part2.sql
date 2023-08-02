@@ -16,6 +16,7 @@ CREATE PROCEDURE add_p2p_check(
 BEGIN
   DECLARE newCheckID INT;
 
+
   -- Добавление записи в таблицу Checks
   IF p2pStatus = 'start' THEN
     INSERT INTO Checks (task_name, check_status, check_date)
