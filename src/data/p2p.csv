@@ -9,5 +9,3 @@ id,check_id,checking_peer,state,time
 8,4,tamelabe,success,2023-07-04 10:30:00
 9,5,nyarlath,start,2023-07-05 21:30:00
 10,5,nyarlath,success,2023-07-05 22:00:00
-11,5,nyarlath,start,2023-07-02 21:30:00
-12,5,nyarlath,success,2023-07-02 22:00:00

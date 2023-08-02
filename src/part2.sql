@@ -10,9 +10,11 @@ CREATE PROCEDURE add_p2p_check(
   IN checked_peer VARCHAR(16),
   IN checking_peer VARCHAR(16),
   IN task_title VARCHAR(32),
-  IN state  state_of_check,
-  IN time timestamp
+  IN state state_of_check,
+  IN time_ timestamp
 )
+LANGUAGE plpgsql
+AS $$
 DECLARE
     check_id_max INTEGER;
 BEGIN
@@ -24,9 +26,9 @@ BEGIN
   SELECT MAX(id) INTO check_id_max FROM check_id;
   -- Добавление записи в таблицу P2P
   INSERT INTO p2p (check_id, checking_peer, state, time)
-  VALUES (check_id_max, checking_peer, state, time);
+  VALUES (check_id_max, checking_peer, state, time_);
 END;
-$$ LANGUAGE plpgsql;
+$$;
 
 -- 2) Написать процедуру добавления проверки Verter'ом
 -- Параметры: ник проверяемого, название задания, статус проверки Verter'ом, время. 
