@@ -1,35 +1,6 @@
 -- TASK 1
 
--- Ниже представлен скрипт part3.sql, который содержит описанные процедуры и функции.
-
--- Процедура для импорта данных в таблицу P2P из файла CSV
-DELIMITER //
-
-CREATE PROCEDURE ImportP2P(IN filePath VARCHAR(255), IN delimiter CHAR(1))
-BEGIN
-  LOAD DATA INFILE filePath
-  INTO TABLE P2P
-  FIELDS TERMINATED BY delimiter
-  IGNORE 1 LINES;
-END //
-
-DELIMITER ;
-
--- Процедура для экспорта данных из таблицы P2P в файл CSV
-DELIMITER //
-
-CREATE PROCEDURE ExportP2P(IN filePath VARCHAR(255), IN delimiter CHAR(1))
-BEGIN
-  SELECT *
-  INTO OUTFILE filePath
-  FIELDS TERMINATED BY delimiter
-  FROM P2P;
-END //
-
-DELIMITER ;
-
 -- Функция для возвращения таблицы TransferredPoints в более человекочитаемом виде
-DELIMITER //
 
 CREATE FUNCTION GetReadableTransferredPoints()
 RETURNS TABLE
@@ -45,9 +16,7 @@ RETURN (
   JOIN Peers p1 ON tp.peer1_id = p1.peer_id
   JOIN Peers p2 ON tp.peer2_id = p2.peer_id
 );
-//
 
-DELIMITER ;
 -- В этом скрипте определены следующие процедуры и функции:
 
 -- Процедура ImportP2P: Эта процедура принимает два параметра - путь к файлу CSV (filePath) и разделитель (delimiter). Она используется для импорта данных из файла CSV в таблицу P2P. Процедура загружает данные из файла в таблицу, используя указанный разделитель и игнорируя первую строку (заголовок).
