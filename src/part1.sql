@@ -13,15 +13,15 @@ CREATE DATABASE INFO_21;
 
 -- Создание таблицы peers
 CREATE TABLE peers (
-    nickname varchar(16) primary key,
-    birthday date
+    nickname varchar(16) primary key not null,
+    birthday date not null
 );
 
 -- Создание таблицы tasks
 CREATE TABLE tasks (
-    title varchar(32) primary key,
+    title varchar(32) primary key not null,
     parent_task varchar(32),
-    max_xp int,
+    max_xp int not null,
     CHECK (max_xp >= 0),
     FOREIGN KEY (parent_task) REFERENCES tasks (title)
 );
@@ -110,6 +110,28 @@ CREATE TABLE time_tracking (
         state IN (1, 2)
     )
 );
+
+-- Триггеры
+
+-- При добавлении записи в check идет проверка на завершение родительского таска
+CREATE OR REPLACE FUNCTION check_parent_task_in_xp() RETURNS trigger AS $$
+BEGIN
+    IF (SELECT parent_task FROM tasks WHERE tasks.title = NEW.task AND parent_task IS NOT NULL) IS NOT NULL THEN
+        -- Проверяем наличие записи в тpаблице xp по parent_task
+        IF NOT EXISTS (SELECT 1 FROM xp
+        JOIN checks ON xp.check_id = checks.id
+        WHERE checks.peer = NEW.peer AND checks.task IN (SELECT parent_task FROM tasks WHERE tasks.title = NEW.task)) THEN
+            RAISE EXCEPTION 'Родительский таск не был выполнен';
+        END IF;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER check_xp_completed_trigger
+AFTER INSERT ON checks
+FOR EACH ROW
+EXECUTE FUNCTION check_parent_task_in_xp();
     
 -- Функция импорта данных из CSV файла в указанную таблицу
 CREATE OR REPLACE FUNCTION ImportTableFromCSV(

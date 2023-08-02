@@ -1,20 +1,23 @@
--- Ниже представлен скрипт part2.sql, который содержит процедуру AddP2PCheck для добавления P2P проверки, а также тестовые запросы/вызовы для каждого пункта.
+-- 1) Написать процедуру добавления P2P проверки
+-- Параметры: ник проверяемого, ник проверяющего, название задания, статус P2P проверки, время. 
+-- Если задан статус "start", добавить запись в таблицу Checks (в качестве даты использовать сегодняшнюю). 
+-- Добавить запись в таблицу P2P. 
+-- Если задан статус "start", в качестве проверки указать только что добавленную запись, иначе указать проверку с незавершенным P2P этапом.
 
 -- Создание процедуры добавления P2P проверки
-DELIMITER //
 
-CREATE PROCEDURE AddP2PCheck(
-  IN peerToCheck VARCHAR(255),
-  IN peerToVerify VARCHAR(255),
-  IN taskName VARCHAR(255),
-  IN p2pStatus VARCHAR(255),
-  IN checkTime DATETIME
+CREATE PROCEDURE add_p2p_check(
+  IN peer_check VARCHAR(255),
+  IN peer_verify VARCHAR(255),
+  IN task_title VARCHAR(255),
+  IN p2p_status  state_of_check,
+  IN check_time DATETIME
 )
 BEGIN
   DECLARE newCheckID INT;
 
   -- Добавление записи в таблицу Checks
-  IF p2pStatus = 'начало' THEN
+  IF p2pStatus = 'start' THEN
     INSERT INTO Checks (task_name, check_status, check_date)
     VALUES (taskName, p2pStatus, CURDATE());
     SET newCheckID = LAST_INSERT_ID();
@@ -28,9 +31,7 @@ BEGIN
   -- Добавление записи в таблицу P2P
   INSERT INTO P2P (peer_to_check, peer_to_verify, check_id, check_time)
   VALUES (peerToCheck, peerToVerify, newCheckID, checkTime);
-END //
-
-DELIMITER ;
+END 
 
 -- Тестовые запросы/вызовы для каждого пункта
 
@@ -49,6 +50,9 @@ CALL AddP2PCheck('проверяемый2', 'проверяющий2', 'Зада
 -- Добавление P2P проверки со статусом "начало" для проверяемого пира "проверяемый1", проверяющего пира "проверяющий1" и задания с названием "Задание1". Время проверки устанавливается на текущий момент (NOW()).
 -- Добавление P2P проверки со статусом "незавершенный P2P" для проверяемого пира "проверяемый2", проверяющего пира "проверяющий2" и задания с названием "Задание2". Время проверки устанавливается на текущий момент (NOW()).
 -- Вы можете изменить параметры вызовов процедуры AddP2PCheck в тестовых запросах, чтобы адаптировать их под свои данные.
+
+
+
 
 
 -- Ниже представлен скрипт part2.sql, который содержит процедуру AddVerterCheck для добавления проверки Verter'ом, а также тестовые запросы/вызовы для каждого пункта.
