@@ -5,15 +5,15 @@ CREATE SCHEMA IF NOT EXISTS public;
 
 
 DROP TABLE IF EXISTS peers,
-                     tasks,
-                     p2p,
-                     verter,
-                     checks,
-                     transferred_points,
-                     friends,
-                     recommendations,
-                     xp,
-                     time_tracking CASCADE;
+    tasks,
+    p2p,
+    verter,
+    checks,
+    transferred_points,
+    friends,
+    recommendations,
+    xp,
+    time_tracking CASCADE;
 
 
 DROP TYPE IF EXISTS state_of_check;
@@ -64,6 +64,54 @@ CREATE TABLE p2p
     CONSTRAINT unique_p2p UNIQUE (check_id, state)
 );
 
+CREATE OR REPLACE FUNCTION check_state_first_record_in_p2p()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF NOT EXISTS(
+            SELECT 1
+            FROM p2p
+            WHERE check_id = NEW.check_id
+        ) THEN
+        IF NEW.state != 'start' THEN
+            RAISE EXCEPTION 'only records with state "start" are allowed when check_id does not exist in p2p table';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+
+CREATE TRIGGER check_state_first_record_in_p2p
+    BEFORE INSERT
+    ON p2p
+    FOR EACH ROW
+EXECUTE FUNCTION check_state_first_record_in_p2p();
+
+CREATE OR REPLACE FUNCTION check_time_second_record_in_p2p()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+            SELECT 1
+            FROM p2p
+            WHERE state = 'start'
+              AND NEW.time <= time
+        ) THEN
+        RAISE EXCEPTION 'invalid time for the new p2p record';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_check_time_second_record_in_p2p
+    BEFORE INSERT
+    ON p2p
+    FOR EACH ROW
+EXECUTE FUNCTION check_time_second_record_in_p2p();
+
 -- Создание таблицы verter
 CREATE TABLE verter
 (
@@ -75,13 +123,61 @@ CREATE TABLE verter
     CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 
+CREATE OR REPLACE FUNCTION check_state_first_record_in_verter()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF NOT EXISTS(
+            SELECT 1
+            FROM verter
+            WHERE check_id = NEW.check_id
+        ) THEN
+        IF NEW.state != 'start' THEN
+            RAISE EXCEPTION 'only records with state "start" are allowed when check_id does not exist in verter table';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$
+    LANGUAGE plpgsql;
+
+CREATE TRIGGER check_state_first_record_in_verter
+    BEFORE INSERT
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_state_first_record_in_verter();
+
+CREATE OR REPLACE FUNCTION check_time_second_record_in_verter()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+            SELECT 1
+            FROM verter
+            WHERE state = 'start'
+              AND NEW.time <= time
+        ) THEN
+        RAISE EXCEPTION 'invalid time for the new verter table record';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_check_time_second_record_in_verter
+    BEFORE INSERT
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_time_second_record_in_verter();
+
 -- Создание таблицы transferred_points
 CREATE TABLE transferred_points
 (
     id            serial primary key,
     checking_peer varchar(16),
     checked_peer  varchar(16),
-    points_amount int,
+    points_amount int default 1,
     CONSTRAINT ch_range_points_amount CHECK (points_amount >= 0),
     CONSTRAINT fk_transferred_points_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
     CONSTRAINT fk_transferred_points_checked_peer FOREIGN KEY (checked_peer) REFERENCES peers (nickname)
@@ -181,7 +277,7 @@ CREATE TRIGGER check_xp_completed_trigger
 EXECUTE FUNCTION check_parent_task_in_xp();
 
 -- Проверяет, что добавляемая запись проверки в таблицу p2p не является третьей
-CREATE OR REPLACE FUNCTION p2p_check_two_notes() RETURNS TRIGGER AS
+CREATE OR REPLACE FUNCTION p2p_check_two_records() RETURNS TRIGGER AS
 $$
 DECLARE
     count_records INTEGER;
@@ -200,17 +296,17 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Проверяет, что добавляемая запись проверки в таблицу p2p не является третьей
-CREATE TRIGGER p2p_check_two_notes_trigger
+CREATE TRIGGER p2p_check_two_records_trigger
     BEFORE
         INSERT
         OR
         UPDATE
     ON p2p
     FOR EACH ROW
-EXECUTE FUNCTION p2p_check_two_notes();
+EXECUTE FUNCTION p2p_check_two_records();
 
 -- Проверяет, что добавляемая запись проверки в таблицу verter не является третьей
-CREATE OR REPLACE FUNCTION verter_check_two_notes() RETURNS TRIGGER AS
+CREATE OR REPLACE FUNCTION verter_check_two_records() RETURNS TRIGGER AS
 $$
 DECLARE
     count_records INTEGER;
@@ -229,128 +325,14 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Проверяет, что добавляемая запись проверки в таблицу verter не является третьей
-CREATE TRIGGER verter_check_two_notes_trigger
+CREATE TRIGGER verter_check_two_records_trigger
     BEFORE
         INSERT
         OR
         UPDATE
     ON verter
     FOR EACH ROW
-EXECUTE FUNCTION verter_check_two_notes();
-
--- Проверяет, что можно ссылаться только на успешные P2P проверки в таблице check
-CREATE OR REPLACE FUNCTION check_success_p2p() RETURNS TRIGGER AS
-$$
-BEGIN
-    IF NOT EXISTS(
-            SELECT 1
-            FROM checks
-                     JOIN p2p ON checks.id = p2p.check_id
-            WHERE checks.id = NEW.check_id
-              AND p2p.state = 'success'
-        ) THEN
-        RAISE EXCEPTION 'you can only refer to successful p2p checks';
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Проверяет, что можно ссылаться только на успешные P2P проверки в таблице check
-CREATE TRIGGER verter_check_success_p2p_trigger
-    BEFORE
-        INSERT
-        OR
-        UPDATE
-    ON verter
-    FOR EACH ROW
-EXECUTE FUNCTION check_success_p2p();
-
--- Проверяет есть ли успешная проверка p2p задания
--- перед добавлением/изменением в таблице xp
-CREATE TRIGGER xp_check_success_p2p
-    BEFORE
-        INSERT
-        OR
-        UPDATE
-    ON xp
-    FOR EACH ROW
-EXECUTE FUNCTION check_success_p2p();
-
--- Проверяет, что значение xp_amount не превышает max_xp для соответствующего задания:
-CREATE OR REPLACE FUNCTION check_xp_amount() RETURNS TRIGGER AS
-$$
-BEGIN
-    DECLARE
-        max_xp_value INT;
-    BEGIN
-        SELECT max_xp
-        INTO max_xp_value
-        FROM tasks
-                 JOIN checks ON tasks.title = checks.task
-        WHERE checks.id = NEW.check_id;
-
-        -- Проверка, что xp_amount не превышает max_xp
-        IF NEW.xp_amount > max_xp_value THEN
-            RAISE EXCEPTION 'xp_amount exceeds max_xp';
-        END IF;
-
-        RETURN NEW;
-    END;
-END;
-$$ LANGUAGE plpgsql;
-
--- Проверяет, не превышает ли добавляемое значение xp максимально возможное для данного задания
--- перед добавлением/изменением в таблице xp
-CREATE TRIGGER xp_check_xp_amount_trigger
-    BEFORE
-        INSERT
-        OR
-        UPDATE
-    ON xp
-    FOR EACH ROW
-EXECUTE FUNCTION check_xp_amount();
-
--- Функция для таблицы xp, которая проверяет, что проверка Verter'ом является успешной или отсутствует:
-CREATE OR REPLACE FUNCTION check_success_verter() RETURNS TRIGGER AS
-$$
-DECLARE
-    verter_check_success BOOLEAN;
-    verter_check_exists  BOOLEAN;
-BEGIN
-    SELECT EXISTS(
-                   SELECT 1
-                   FROM verter
-                   WHERE check_id = NEW.check_id
-               )
-    INTO verter_check_exists;
-
-    SELECT EXISTS(
-                   SELECT 1
-                   FROM verter
-                   WHERE check_id = NEW.check_id
-                     AND state = 'success'
-               )
-    INTO verter_check_success;
-
-    IF (NOT verter_check_exists) AND verter_check_success THEN
-        RAISE EXCEPTION 'there are not successful verter check';
-    END IF;
-
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Проверяет есть ли успешная проверка verter'ом задания
--- перед добавлением/изменением в таблице xp
-CREATE TRIGGER xp_check_success_verter
-    BEFORE
-        INSERT
-        OR
-        UPDATE
-    ON xp
-    FOR EACH ROW
-EXECUTE FUNCTION check_success_verter();
+EXECUTE FUNCTION verter_check_two_records();
 
 -- Проверяет, что время проверки Verter'ом не раньше, чем окончание проверки P2P
 CREATE OR REPLACE FUNCTION check_verter_time() RETURNS TRIGGER AS
@@ -428,7 +410,6 @@ $$;
 -- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
 -- -- Импорт данных из CSV файла
--- -- CALL ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/xp.csv');
 -- SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
 -- SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
 -- SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
