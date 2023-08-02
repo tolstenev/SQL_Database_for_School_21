@@ -402,27 +402,52 @@ BEGIN
 END;
 $$;
 
--- Импорт данных из CSV файла
-SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
-SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
-SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
-SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
-SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
-SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
-SELECT ImportTableFromCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
-SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
-SELECT ImportTableFromCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
-SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
-SELECT ImportTableFromCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
+-- -- Импорт данных из CSV файла
+-- SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
+-- SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
+-- SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
+-- SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
+-- SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
+-- SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
+-- SELECT ImportTableFromCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
+-- SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
+-- SELECT ImportTableFromCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
+-- SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
+-- SELECT ImportTableFromCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
--- Экспорт данных в CSV файл
-SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
-SELECT ExportTableToCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
-SELECT ExportTableToCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
-SELECT ExportTableToCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
-SELECT ExportTableToCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
-SELECT ExportTableToCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
-SELECT ExportTableToCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
-SELECT ExportTableToCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
-SELECT ExportTableToCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
-SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
+-- -- Экспорт данных в CSV файл
+-- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
+-- SELECT ExportTableToCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
+-- SELECT ExportTableToCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
+-- SELECT ExportTableToCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
+-- SELECT ExportTableToCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
+-- SELECT ExportTableToCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
+-- SELECT ExportTableToCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
+-- SELECT ExportTableToCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
+-- SELECT ExportTableToCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
+-- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
+
+-- -- Импорт данных из CSV файла
+-- -- CALL ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/xp.csv');
+-- SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
+-- SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
+-- SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
+-- SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
+-- SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
+-- SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
+-- SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
+-- SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
+-- SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
+-- SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
+--
+-- -- Экспорт данных в CSV файл
+-- SELECT ExportTableToCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
+-- SELECT ExportTableToCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
+-- SELECT ExportTableToCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
+-- SELECT ExportTableToCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
+-- SELECT ExportTableToCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
+-- SELECT ExportTableToCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
+-- SELECT ExportTableToCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
+-- SELECT ExportTableToCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
+-- SELECT ExportTableToCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
+-- SELECT ExportTableToCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
