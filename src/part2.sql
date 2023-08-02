@@ -162,7 +162,7 @@ BEGIN
                )
     INTO verter_check_success;
 
-    IF (NOT verter_check_exists) AND verter_check_success THEN
+    IF (NOT verter_check_exists) OR verter_check_success THEN
         RAISE EXCEPTION 'there are not successful verter check';
     END IF;
 
@@ -179,6 +179,15 @@ INSERT
 OR
 UPDATE ON xp
 FOR EACH ROW EXECUTE FUNCTION check_success_verter();
+
+CREATE TRIGGER verter_check_success_p2p_trigger
+    BEFORE
+        INSERT
+        OR
+        UPDATE
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_success_p2p();
 -- Тестовые запросы/вызовы для каждого пункта
 
 -- Добавление корректной записи в таблицу XP
