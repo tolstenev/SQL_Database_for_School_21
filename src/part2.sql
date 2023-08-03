@@ -10,8 +10,8 @@ CREATE PROCEDURE add_p2p_check(
   IN checked_peer VARCHAR(16),
   IN checking_peer VARCHAR(16),
   IN task_title VARCHAR(32),
-  IN state state_of_check,
-  IN time_ timestamp
+  IN state_check state_of_check,
+  IN time_check timestamp
 )
 LANGUAGE plpgsql
 AS $$
@@ -19,14 +19,14 @@ DECLARE
     check_id_max INTEGER;
 BEGIN
   -- Добавление записи в таблицу Checks
-  IF state = 'start' THEN
+  IF state_check = 'start' THEN
     INSERT INTO checks (peer, task)
     VALUES (checked_peer, task_title);
   END IF;
   SELECT MAX(id) INTO check_id_max FROM check_id;
   -- Добавление записи в таблицу P2P
-  INSERT INTO p2p (check_id, checking_peer, state, time)
-  VALUES (check_id_max, checking_peer, state, time_);
+  INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+  VALUES (check_id_max, checking_peer, state_check, time_check);
 END;
 $$;
 
@@ -41,8 +41,8 @@ $$;
 CREATE PROCEDURE add_verter_check(
   IN checked_peer VARCHAR(16),
   IN task_title VARCHAR(32),
-  IN state  state_of_check,
-  IN time timestamp
+  IN state_check  state_of_check,
+  IN time_check timestamp
 )
 BEGIN
   DECLARE latestSuccessfulP2PCheckID INT;
@@ -51,11 +51,11 @@ BEGIN
   SELECT MAX(check_id) INTO latestSuccessfulP2PCheckID
   FROM p2p
   JOIN checks ON p2p.check_id = checks.id
-  WHERE checks.task = task_title AND p2p.state = 'success' AND checks.peer = checked_peer;
+  WHERE checks.task = task_title AND p2p.state_check = 'success' AND checks.peer = checked_peer;
 
   -- Добавление записи в таблицу Verter
-  INSERT INTO verter (check_id, state, time)
-  VALUES (latestSuccessfulP2PCheckID, state, time);
+  INSERT INTO verter (check_id, state_check, time_check)
+  VALUES (latestSuccessfulP2PCheckID, state_check, time_check);
 END;
 $$ LANGUAGE plpgsql;
 -- Тестовые запросы/вызовы для каждого пункта
@@ -68,7 +68,7 @@ CALL add_verter_check('manhunte', 'C2_Simple_Bash_Utils', 'success', NOW());
 
 CREATE OR REPLACE FUNCTION add_start_p2p_check() RETURNS TRIGGER AS $$
 BEGIN
-  IF NEW.state = 'start' THEN
+  IF NEW.state_check = 'start' THEN
     INSERT INTO transferred_points (checking_peer, checked_peer)
     VALUES (NEW.checking_peer, (SELECT peer FROM checks WHERE id = NEW.check_id));
   END IF;
@@ -160,7 +160,7 @@ BEGIN
                    SELECT 1
                    FROM verter
                    WHERE check_id = NEW.check_id
-                     AND state = 'success'
+                     AND state_check = 'success'
                )
     INTO verter_check_success;
 
