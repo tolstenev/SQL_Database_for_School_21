@@ -6,13 +6,15 @@
 
 -- Создание процедуры добавления P2P проверки
 
-CREATE PROCEDURE add_p2p_check(
-  IN checked_peer VARCHAR(16),
-  IN checking_peer VARCHAR(16),
-  IN task_title VARCHAR(32),
-  IN state_check state_of_check,
-  IN time_check timestamp
+DROP FUNCTION IF EXISTS add_p2p_check;
+CREATE FUNCTION add_p2p_check(
+  checked_peer VARCHAR(16),
+  checking_peer VARCHAR(16),
+  task_title VARCHAR(32),
+  state_check state_of_check,
+  time_check timestamp
 )
+RETURNS VOID
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -20,10 +22,10 @@ DECLARE
 BEGIN
   -- Добавление записи в таблицу Checks
   IF state_check = 'start' THEN
-    INSERT INTO checks (peer, task)
-    VALUES (checked_peer, task_title);
+    INSERT INTO checks (peer, task, date_check)
+    VALUES (checked_peer, task_title, time_check);
   END IF;
-  SELECT MAX(id) INTO check_id_max FROM check_id;
+  SELECT MAX(id) INTO check_id_max FROM checks;
   -- Добавление записи в таблицу P2P
   INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
   VALUES (check_id_max, checking_peer, state_check, time_check);
@@ -38,15 +40,15 @@ $$;
 
 -- Создание процедуры добавления проверки Verter'ом
 
-CREATE PROCEDURE add_verter_check(
-  IN checked_peer VARCHAR(16),
-  IN task_title VARCHAR(32),
-  IN state_check  state_of_check,
-  IN time_check timestamp
-)
-BEGIN
-  DECLARE latestSuccessfulP2PCheckID INT;
+CREATE FUNCTION add_verter_check(
+  checked_peer VARCHAR(16),
+  task_title VARCHAR(32),
+  state_check state_of_check,
+  time_check timestamp
+) RETURNS VOID AS $$
+DECLARE latestSuccessfulP2PCheckID INT;
 
+BEGIN
   -- Получение ID последней успешной P2P проверки для задания
   SELECT MAX(check_id) INTO latestSuccessfulP2PCheckID
   FROM p2p
@@ -58,20 +60,18 @@ BEGIN
   VALUES (latestSuccessfulP2PCheckID, state_check, time_check);
 END;
 $$ LANGUAGE plpgsql;
--- Тестовые запросы/вызовы для каждого пункта
--- Добавление проверки Verter'ом
-CALL add_verter_check('manhunte', 'C2_Simple_Bash_Utils', 'start', NOW());
-CALL add_verter_check('manhunte', 'C2_Simple_Bash_Utils', 'success', NOW());
 
 
 -- 3) Написать триггер: после добавления записи со статутом "начало" в таблицу P2P, изменить соответствующую запись в таблице TransferredPoints
-
+DROP FUNCTION IF EXISTS add_start_p2p_check() CASCADE;
 CREATE OR REPLACE FUNCTION add_start_p2p_check() RETURNS TRIGGER AS $$
 BEGIN
   IF NEW.state_check = 'start' THEN
     INSERT INTO transferred_points (checking_peer, checked_peer)
     VALUES (NEW.checking_peer, (SELECT peer FROM checks WHERE id = NEW.check_id));
   END IF;
+  
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -81,16 +81,6 @@ INSERT
 OR
 UPDATE ON p2p
 FOR EACH ROW EXECUTE FUNCTION add_start_p2p_check();
-
--- Тестовые запросы/вызовы для каждого пункта
--- Добавление P2P проверки со статусом "start"
-CALL add_p2p_check('manhunte', 'nyarlath', 'C2_Simple_Bash_Utils', 'start', NOW());
--- Добавление P2P проверки со статусом "failure"
-CALL add_p2p_check('manhunte', 'nyarlath', 'C2_Simple_Bash_Utils', 'failure', NOW());
-
--- Проверка изменений в таблице TransferredPoints
-SELECT * FROM TransferredPoints;
-
 
 -- 4) Написать триггер: перед добавлением записи в таблицу XP, проверить корректность добавляемой записи
 -- Запись считается корректной, если:
@@ -191,6 +181,21 @@ CREATE TRIGGER verter_check_success_p2p_trigger
     FOR EACH ROW
 EXECUTE FUNCTION check_success_p2p();
 -- Тестовые запросы/вызовы для каждого пункта
+
+-- Добавление P2P проверки со статусом "start"
+SELECT add_p2p_check('manhunte', 'nyarlath', 'C2_Simple_Bash_Utils', 'start', '2023-08-02');
+-- Добавление P2P проверки со статусом "failure"
+SELECT add_p2p_check('manhunte', 'nyarlath', 'C2_Simple_Bash_Utils', 'failure', '2023-08-02 11:00:00');
+SELECT * FROM checks;
+SELECT * FROM p2p;
+
+-- Проверка изменений в таблице TransferredPoints
+SELECT * FROM transferred_points;
+
+-- Добавление проверки Verter'ом
+SELECT add_verter_check('manhunte', 'C2_Simple_Bash_Utils', 'start', '2023-08-03');
+SELECT add_verter_check('manhunte', 'C2_Simple_Bash_Utils', 'success', '2023-08-03 12:00:00');
+
 
 -- Добавление корректной записи в таблицу XP
 INSERT INTO xp (check_id, xp_amount)
