@@ -9,7 +9,7 @@
 -- CREATE DATABASE info_21;
 
 
-CREATE SCHEMA IF NOT EXISTS public;
+-- CREATE SCHEMA IF NOT EXISTS public;
 
 
 DROP TABLE IF EXISTS peers,
@@ -81,7 +81,7 @@ BEGIN
             FROM p2p
             WHERE check_id = NEW.check_id
         ) THEN
-        IF NEW.state != 'start' THEN
+        IF NEW.state_check != 'start' THEN
             RAISE EXCEPTION 'only records with state "start" are allowed when check_id does not exist in p2p table';
         END IF;
     END IF;
@@ -105,7 +105,7 @@ BEGIN
             SELECT 1
             FROM p2p
             WHERE state_check = 'start'
-              AND NEW.time <= time_check
+              AND NEW.time_check <= time_check
         ) THEN
         RAISE EXCEPTION 'invalid time for the new p2p record';
     END IF;
@@ -163,7 +163,7 @@ BEGIN
             FROM verter
             WHERE check_id = NEW.check_id
         ) THEN
-        IF NEW.state != 'start' THEN
+        IF NEW.state_check != 'start' THEN
             RAISE EXCEPTION 'only records with state "start" are allowed when check_id does not exist in verter table';
         END IF;
     END IF;
@@ -187,7 +187,7 @@ BEGIN
             SELECT 1
             FROM verter
             WHERE state_check = 'start'
-              AND NEW.time <= time_check
+              AND NEW.time_check <= time_check
         ) THEN
         RAISE EXCEPTION 'invalid time for the new verter table record';
     END IF;
@@ -399,7 +399,7 @@ BEGIN
             SELECT 1
             FROM p2p
             WHERE p2p.check_id = NEW.check_id
-              AND p2p.time > NEW.time
+              AND p2p.time_check > NEW.time_check
         ) THEN
         RAISE EXCEPTION 'verter checking time cannot be earlier than p2p checking time';
     END IF;
