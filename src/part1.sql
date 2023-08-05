@@ -1,5 +1,4 @@
 -- TODO: проверить все ограничения в таблицах
--- в таблице recommendations рекомендовать можно только того, у кого был на проверке, то есть в поле peer можно добавлять записи checked_peer из transferred_points, а в recommended_peer можно добавлять только checking_peer соответствующего checked_peer
 -- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
 
 -- Задачи:
@@ -297,6 +296,61 @@ CREATE TABLE time_tracking
     CONSTRAINT ch_state CHECK (state IN (1, 2))
 );
 
+CREATE OR REPLACE FUNCTION check_time_tracking()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    count_state_1 integer;
+    count_state_2 integer;
+BEGIN
+    SELECT COUNT(*)
+    INTO count_state_1
+    FROM time_tracking
+    WHERE peer_nickname = NEW.peer_nickname
+      AND date = NEW.date
+      AND state = 1;
+
+    SELECT COUNT(*)
+    INTO count_state_2
+    FROM time_tracking
+    WHERE peer_nickname = NEW.peer_nickname
+      AND date = NEW.date
+      AND state = 2;
+
+    IF count_state_1 <> count_state_2 THEN
+        RAISE EXCEPTION 'Invalid time tracking: the number of state 1 and state 2 entries must be equal for each peer and date';
+    END IF;
+
+    IF count_state_1 = 0 AND count_state_2 = 0 THEN
+        RETURN NEW;
+    END IF;
+
+    IF count_state_1 = count_state_2 THEN
+        IF (SELECT state
+            FROM time_tracking
+            WHERE peer_nickname = NEW.peer_nickname AND date = NEW.date
+            ORDER BY time DESC
+            LIMIT 1) = 1 THEN
+            IF NEW.state = 1 THEN
+                RAISE EXCEPTION 'Invalid time tracking: state 2 entry is missing before state 1 entry';
+            END IF;
+        ELSE
+            IF NEW.state = 2 THEN
+                RAISE EXCEPTION 'Invalid time tracking: state 1 entry is missing before state 2 entry';
+            END IF;
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_check_time_tracking
+    BEFORE INSERT
+    ON time_tracking
+    FOR EACH ROW
+EXECUTE FUNCTION check_time_tracking();
+
 -- ТРИГГЕРЫ
 
 -- Проверяет на завершение родительского таска для добавляемой записи проверки в таблицу check
@@ -439,17 +493,17 @@ END;
 $$;
 
 -- -- Импорт данных из CSV файла
--- SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
--- SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
--- SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
--- SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
--- SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
--- SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
--- SELECT ImportTableFromCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
--- SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
--- SELECT ImportTableFromCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
--- SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
--- SELECT ImportTableFromCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
+SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
+SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
+SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
+SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
+SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
+SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
+SELECT ImportTableFromCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
+SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
+SELECT ImportTableFromCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
+SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
+SELECT ImportTableFromCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
 -- -- Экспорт данных в CSV файл
 -- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
