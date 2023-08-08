@@ -8,7 +8,7 @@
 -- CREATE DATABASE info_21;
 
 
--- CREATE SCHEMA IF NOT EXISTS public;
+CREATE SCHEMA IF NOT EXISTS public;
 
 
 DROP TABLE IF EXISTS peers,
@@ -24,6 +24,11 @@ DROP TABLE IF EXISTS peers,
 
 
 DROP TYPE IF EXISTS state_of_check;
+
+-- Создание типа перечисления для статуса проверки
+CREATE TYPE state_of_check AS ENUM ('start', 'success', 'failure');
+
+-- ------------------------------------ СОЗДАНИЕ ТАБЛИЦ ------------------------------------ --
 
 -- Создание таблицы peers
 CREATE TABLE peers
@@ -54,9 +59,6 @@ CREATE TABLE checks
     CONSTRAINT fk_checks_task FOREIGN KEY (task) REFERENCES tasks (title)
 );
 
--- Создание типа перечисления для статуса проверки
-CREATE TYPE state_of_check AS ENUM ('start', 'success', 'failure');
-
 -- Создание таблицы p2p
 CREATE TABLE p2p
 (
@@ -70,6 +72,77 @@ CREATE TABLE p2p
     CONSTRAINT fk_p2p_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
     CONSTRAINT unique_p2p UNIQUE (check_id, state_check)
 );
+
+-- Создание таблицы verter
+CREATE TABLE verter
+(
+    id          serial primary key,
+    check_id    int,
+    state_check state_of_check,
+    time_check  timestamp,
+    CONSTRAINT ch_verter_current_time CHECK (time_check <= current_timestamp),
+    CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
+);
+
+-- Создание таблицы transferred_points
+CREATE TABLE transferred_points
+(
+    id            serial primary key,
+    checking_peer varchar(16),
+    checked_peer  varchar(16),
+    points_amount int default 1,
+    CONSTRAINT ch_range_points_amount CHECK (points_amount >= 0),
+    CONSTRAINT fk_transferred_points_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
+    CONSTRAINT fk_transferred_points_checked_peer FOREIGN KEY (checked_peer) REFERENCES peers (nickname)
+);
+
+-- Создание таблицы friends
+CREATE TABLE friends
+(
+    id    serial primary key,
+    peer1 varchar(16),
+    peer2 varchar(16),
+    CONSTRAINT ch_prevent_self_friend CHECK (peer1 != peer2),
+    CONSTRAINT fk_friends_peer1 FOREIGN KEY (peer1) REFERENCES peers (nickname),
+    CONSTRAINT fk_friends_peer2 FOREIGN KEY (peer2) REFERENCES peers (nickname),
+    CONSTRAINT unique_friends UNIQUE (peer1, peer2)
+);
+
+-- Создание таблицы recommendations
+CREATE TABLE recommendations
+(
+    id               serial primary key,
+    peer             varchar(16),
+    recommended_peer varchar(16),
+    CONSTRAINT ch_prevent_self_recommendation CHECK (peer != recommended_peer),
+    CONSTRAINT fk_recommendations_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
+    CONSTRAINT fk_recommendations_recommended_peer FOREIGN KEY (recommended_peer) REFERENCES peers (nickname),
+    CONSTRAINT unique_recommendations UNIQUE (peer, recommended_peer)
+);
+
+-- Создание таблицы xp
+CREATE TABLE xp
+(
+    id        serial primary key,
+    check_id  int,
+    xp_amount int,
+    CONSTRAINT ch_xp_amount_range CHECK (xp_amount >= 0),
+    CONSTRAINT fk_xp_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
+);
+
+-- Создание таблицы time_tracking
+CREATE TABLE time_tracking
+(
+    id            serial primary key,
+    peer_nickname varchar(16),
+    date_track          date,
+    time_track          time,
+    state_track         int,
+    CONSTRAINT fk_time_tracking_peer_nickname FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
+    CONSTRAINT ch_state_track CHECK (state_track IN (1, 2))
+);
+
+-- ------------------------------------ ТРИГГЕРЫ ------------------------------------ --
 
 CREATE OR REPLACE FUNCTION check_state_first_record_in_p2p()
     RETURNS TRIGGER AS
@@ -119,16 +192,7 @@ CREATE TRIGGER trigger_check_time_second_record_in_p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_p2p();
 
--- Создание таблицы verter
-CREATE TABLE verter
-(
-    id          serial primary key,
-    check_id    int,
-    state_check state_of_check,
-    time_check  timestamp,
-    CONSTRAINT ch_verter_current_time CHECK (time_check <= current_timestamp),
-    CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
-);
+
 
 CREATE OR REPLACE FUNCTION check_verter_date()
     RETURNS TRIGGER AS
@@ -201,30 +265,6 @@ CREATE TRIGGER trigger_check_time_second_record_in_verter
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_verter();
 
--- Создание таблицы transferred_points
-CREATE TABLE transferred_points
-(
-    id            serial primary key,
-    checking_peer varchar(16),
-    checked_peer  varchar(16),
-    points_amount int default 1,
-    CONSTRAINT ch_range_points_amount CHECK (points_amount >= 0),
-    CONSTRAINT fk_transferred_points_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
-    CONSTRAINT fk_transferred_points_checked_peer FOREIGN KEY (checked_peer) REFERENCES peers (nickname)
-);
-
--- Создание таблицы friends
-CREATE TABLE friends
-(
-    id    serial primary key,
-    peer1 varchar(16),
-    peer2 varchar(16),
-    CONSTRAINT ch_prevent_self_friend CHECK (peer1 != peer2),
-    CONSTRAINT fk_friends_peer1 FOREIGN KEY (peer1) REFERENCES peers (nickname),
-    CONSTRAINT fk_friends_peer2 FOREIGN KEY (peer2) REFERENCES peers (nickname),
-    CONSTRAINT unique_friends UNIQUE (peer1, peer2)
-);
-
 -- -- Проверка на запрет дублирования в таблице friends
 -- INSERT INTO friends (id, peer1, peer2)
 -- VALUES (6, 'manhunte', 'cherigra');
@@ -232,17 +272,6 @@ CREATE TABLE friends
 -- INSERT INTO friends (id, peer1, peer2)
 -- VALUES (7, 'manhunte', 'manhunte');
 
--- Создание таблицы recommendations
-CREATE TABLE recommendations
-(
-    id               serial primary key,
-    peer             varchar(16),
-    recommended_peer varchar(16),
-    CONSTRAINT ch_prevent_self_recommendation CHECK (peer != recommended_peer),
-    CONSTRAINT fk_recommendations_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
-    CONSTRAINT fk_recommendations_recommended_peer FOREIGN KEY (recommended_peer) REFERENCES peers (nickname),
-    CONSTRAINT unique_recommendations UNIQUE (peer, recommended_peer)
-);
 
 CREATE OR REPLACE FUNCTION check_recommendation()
     RETURNS TRIGGER AS
@@ -274,28 +303,6 @@ EXECUTE FUNCTION check_recommendation();
 -- INSERT INTO recommendations (id, peer, recommended_peer)
 -- VALUES (7, 'manhunte', 'manhunte');
 
--- Создание таблицы xp
-CREATE TABLE xp
-(
-    id        serial primary key,
-    check_id  int,
-    xp_amount int,
-    CONSTRAINT ch_xp_amount_range CHECK (xp_amount >= 0),
-    CONSTRAINT fk_xp_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
-);
-
--- Создание таблицы time_tracking
-CREATE TABLE time_tracking
-(
-    id            serial primary key,
-    peer_nickname varchar(16),
-    date_track          date,
-    time_track          time,
-    state_track         int,
-    CONSTRAINT fk_time_tracking_peer_nickname FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
-    CONSTRAINT ch_state_track CHECK (state_track IN (1, 2))
-);
-
 CREATE OR REPLACE FUNCTION check_time_tracking()
     RETURNS TRIGGER AS
 $$
@@ -307,17 +314,17 @@ BEGIN
     INTO count_state_1
     FROM time_tracking
     WHERE peer_nickname = NEW.peer_nickname
-      AND date = NEW.date
-      AND state = 1;
+      AND date_track = NEW.date_track
+      AND state_track = 2;
 
     SELECT COUNT(*)
     INTO count_state_2
     FROM time_tracking
     WHERE peer_nickname = NEW.peer_nickname
-      AND date = NEW.date
-      AND state = 2;
+      AND date_track = NEW.date_track
+      AND state_track = 2;
 
-    IF count_state_1 <> count_state_2 THEN
+    IF count_state_1 != count_state_2 THEN
         RAISE EXCEPTION 'Invalid time tracking: the number of state 1 and state 2 entries must be equal for each peer and date';
     END IF;
 
@@ -326,16 +333,16 @@ BEGIN
     END IF;
 
     IF count_state_1 = count_state_2 THEN
-        IF (SELECT state
+        IF (SELECT state_track
             FROM time_tracking
-            WHERE peer_nickname = NEW.peer_nickname AND date = NEW.date
-            ORDER BY time DESC
+            WHERE peer_nickname = NEW.peer_nickname AND date_track = NEW.date_track
+            ORDER BY time_track DESC
             LIMIT 1) = 1 THEN
-            IF NEW.state = 1 THEN
+            IF NEW.state_track = 1 THEN
                 RAISE EXCEPTION 'Invalid time tracking: state 2 entry is missing before state 1 entry';
             END IF;
         ELSE
-            IF NEW.state = 2 THEN
+            IF NEW.state_track = 2 THEN
                 RAISE EXCEPTION 'Invalid time tracking: state 1 entry is missing before state 2 entry';
             END IF;
         END IF;
@@ -350,8 +357,6 @@ CREATE TRIGGER trigger_check_time_tracking
     ON time_tracking
     FOR EACH ROW
 EXECUTE FUNCTION check_time_tracking();
-
--- ТРИГГЕРЫ
 
 -- Проверяет на завершение родительского таска для добавляемой записи проверки в таблицу check
 CREATE OR REPLACE FUNCTION check_parent_task_in_xp() RETURNS trigger AS
@@ -493,7 +498,6 @@ END;
 $$;
 
 -- -- Импорт данных из CSV файла
-SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
 SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
 SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
 SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
@@ -518,16 +522,16 @@ SELECT ImportTableFromCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/proje
 -- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
 -- -- Импорт данных из CSV файла
-SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
-SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
-SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
-SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
-SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
-SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
-SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
-SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
-SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
-SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
+-- SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
+-- SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
+-- SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
+-- SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
+-- SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
+-- SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
+-- SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
+-- SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
+-- SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
+-- SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
 
 -- -- Экспорт данных в CSV файл
 -- SELECT ExportTableToCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
