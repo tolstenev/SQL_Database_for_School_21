@@ -8,7 +8,7 @@
 -- CREATE DATABASE info_21;
 
 
-CREATE SCHEMA IF NOT EXISTS public;
+-- CREATE SCHEMA IF NOT EXISTS public;
 
 
 DROP TABLE IF EXISTS peers,
@@ -80,7 +80,7 @@ BEGIN
             FROM p2p
             WHERE check_id = NEW.check_id
         ) THEN
-        IF NEW.state != 'start' THEN
+        IF NEW.state_check != 'start' THEN
             RAISE EXCEPTION 'only records with state "start" are allowed when check_id does not exist in p2p table';
         END IF;
     END IF;
@@ -104,7 +104,7 @@ BEGIN
             SELECT 1
             FROM p2p
             WHERE state_check = 'start'
-              AND NEW.time <= time_check
+              AND NEW.time_check <= time_check
         ) THEN
         RAISE EXCEPTION 'invalid time for the new p2p record';
     END IF;
@@ -162,7 +162,7 @@ BEGIN
             FROM verter
             WHERE check_id = NEW.check_id
         ) THEN
-        IF NEW.state != 'start' THEN
+        IF NEW.state_check != 'start' THEN
             RAISE EXCEPTION 'only records with state "start" are allowed when check_id does not exist in verter table';
         END IF;
     END IF;
@@ -186,7 +186,7 @@ BEGIN
             SELECT 1
             FROM verter
             WHERE state_check = 'start'
-              AND NEW.time <= time_check
+              AND NEW.time_check <= time_check
         ) THEN
         RAISE EXCEPTION 'invalid time for the new verter table record';
     END IF;
@@ -289,11 +289,11 @@ CREATE TABLE time_tracking
 (
     id            serial primary key,
     peer_nickname varchar(16),
-    date          date,
-    time          time,
-    state         int,
+    date_track          date,
+    time_track          time,
+    state_track         int,
     CONSTRAINT fk_time_tracking_peer_nickname FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
-    CONSTRAINT ch_state CHECK (state IN (1, 2))
+    CONSTRAINT ch_state_track CHECK (state_track IN (1, 2))
 );
 
 CREATE OR REPLACE FUNCTION check_time_tracking()
@@ -453,7 +453,7 @@ BEGIN
             SELECT 1
             FROM p2p
             WHERE p2p.check_id = NEW.check_id
-              AND p2p.time > NEW.time
+              AND p2p.time_check > NEW.time_check
         ) THEN
         RAISE EXCEPTION 'verter checking time cannot be earlier than p2p checking time';
     END IF;
@@ -518,17 +518,17 @@ SELECT ImportTableFromCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/proje
 -- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
 -- -- Импорт данных из CSV файла
--- SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
--- SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
--- SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
--- SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
--- SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
--- SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
--- SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
--- SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
--- SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
--- SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
---
+SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
+SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
+SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
+SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
+SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
+SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
+SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
+SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
+SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
+SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
+
 -- -- Экспорт данных в CSV файл
 -- SELECT ExportTableToCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
 -- SELECT ExportTableToCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
