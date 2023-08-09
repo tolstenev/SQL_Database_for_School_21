@@ -162,7 +162,7 @@ BEGIN
 END;
 $$;
 
--- -- Импорт данных из CSV файла
+-- Импорт данных из CSV файла
 SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
 SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
 SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
@@ -177,6 +177,41 @@ SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql
 SELECT ImportTableFromCSV('time_tracking', ',',
                           '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
+-- -- Экспорт данных в CSV файл
+-- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
+-- SELECT ExportTableToCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
+-- SELECT ExportTableToCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
+-- SELECT ExportTableToCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
+-- SELECT ExportTableToCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
+-- SELECT ExportTableToCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
+-- SELECT ExportTableToCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
+-- SELECT ExportTableToCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
+-- SELECT ExportTableToCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
+-- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
+
+-- -- Импорт данных из CSV файла
+-- SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
+-- SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
+-- SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
+-- SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
+-- SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
+-- SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
+-- SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
+-- SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
+-- SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
+-- SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
+
+-- -- Экспорт данных в CSV файл
+-- SELECT ExportTableToCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
+-- SELECT ExportTableToCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
+-- SELECT ExportTableToCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
+-- SELECT ExportTableToCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
+-- SELECT ExportTableToCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
+-- SELECT ExportTableToCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
+-- SELECT ExportTableToCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
+-- SELECT ExportTableToCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
+-- SELECT ExportTableToCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
+-- SELECT ExportTableToCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
 
 -- ------------------------------------ ТРИГГЕРЫ ------------------------------------ --
 
@@ -361,7 +396,7 @@ CREATE TRIGGER check_state_first_record_in_verter
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_verter();
 
--- Тест, что первая запись в verter имеет статус 'start'
+-- Тест, что первая запись в verter не имеет статус 'start'
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (7, 6, 'failure', '2023-07-02 22:45:00.000000');
 
@@ -438,9 +473,10 @@ EXECUTE FUNCTION check_time_second_record_in_verter();
 -- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
 -- Ожидается ERROR: time_check for the new verter record should be after start record
 -- INSERT INTO verter (id, check_id, state_check, time_check)
--- VALUES (7, 6, 'failure', '2023-07-02 22:42:00.000000');
+-- VALUES (8, 6, 'failure', '2023-07-02 22:42:00.000000');
 
 
+-- Проверяет, что рекомендуемый пир проводил проверку рекомендующего
 CREATE OR REPLACE FUNCTION check_recommendation()
     RETURNS TRIGGER AS
 $$
@@ -453,31 +489,23 @@ BEGIN
         ) THEN
         RETURN NEW;
     ELSE
-        RAISE EXCEPTION 'invalid recommendation: recommended_peer must be a checking_peer of the corresponding checked_peer';
+        RAISE EXCEPTION 'recommended_peer must be a checking_peer of the corresponding checked_peer';
     END IF;
-END;
+END ;
 $$ LANGUAGE plpgsql;
 
+-- Проверяет, что рекомендуемый пир проводил проверку рекомендующего
 CREATE TRIGGER trigger_check_recommendation
     BEFORE INSERT
     ON recommendations
     FOR EACH ROW
 EXECUTE FUNCTION check_recommendation();
 
--- -- Тест на запрет дублирования в таблице recommendations
+-- Тест: рекомендуемый пир не проводил проверку рекомендующего
 -- INSERT INTO recommendations (id, peer, recommended_peer)
--- VALUES (6, 'cherigra', 'manhunte');
--- -- Тест на запрет дружбы с самим recommendations
--- INSERT INTO recommendations (id, peer, recommended_peer)
--- VALUES (7, 'manhunte', 'manhunte');
-
--- -- Тест на запрет дублирования в таблице friends
--- INSERT INTO friends (id, peer1, peer2)
 -- VALUES (6, 'manhunte', 'cherigra');
--- -- Тест на запрет дружбы с самим собой
--- INSERT INTO friends (id, peer1, peer2)
--- VALUES (7, 'manhunte', 'manhunte');
 
+-- Проверяет корректность записей в time_tracking
 CREATE OR REPLACE FUNCTION check_time_tracking()
     RETURNS TRIGGER AS
 $$
@@ -490,7 +518,7 @@ BEGIN
     FROM time_tracking
     WHERE peer_nickname = NEW.peer_nickname
       AND date_track = NEW.date_track
-      AND state_track = 2;
+      AND state_track = 1;
 
     SELECT COUNT(*)
     INTO count_state_2
@@ -498,10 +526,6 @@ BEGIN
     WHERE peer_nickname = NEW.peer_nickname
       AND date_track = NEW.date_track
       AND state_track = 2;
-
-    IF count_state_1 != count_state_2 THEN
-        RAISE EXCEPTION 'Invalid time tracking: the number of state 1 and state 2 entries must be equal for each peer and date';
-    END IF;
 
     IF count_state_1 = 0 AND count_state_2 = 0 THEN
         RETURN NEW;
@@ -515,24 +539,54 @@ BEGIN
             ORDER BY time_track DESC
             LIMIT 1) = 1 THEN
             IF NEW.state_track = 1 THEN
-                RAISE EXCEPTION 'Invalid time tracking: state 2 entry is missing before state 1 entry';
+                RAISE EXCEPTION 'state 2 entry is missing before state 1 entry in time_tracking';
             END IF;
         ELSE
             IF NEW.state_track = 2 THEN
-                RAISE EXCEPTION 'Invalid time tracking: state 1 entry is missing before state 2 entry';
+                RAISE EXCEPTION 'state 1 entry is missing before state 2 entry in time_tracking';
             END IF;
         END IF;
     END IF;
+
+    IF count_state_1 > count_state_2 THEN
+        RAISE EXCEPTION 'state 2 entry is missing before state 1 entry in time_tracking';
+        -- RAISE EXCEPTION 'in time_tracking the number of state 1 and state 2 entries must be equal for each peer and date';
+    END IF;
+
+--     IF count_state_1 != count_state_2 THEN
+--         RAISE EXCEPTION 'in time_tracking the number of state 1 and state 2 entries must be equal for each peer and date';
+--     END IF;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Проверяет корректность записей в time_tracking
 CREATE TRIGGER trigger_check_time_tracking
     BEFORE INSERT
     ON time_tracking
     FOR EACH ROW
 EXECUTE FUNCTION check_time_tracking();
+
+-- Тест: добавление записи со статусом входа без выхода
+-- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
+-- VALUES (7, 'tamelabe', '2023-07-02', '10:00:00', 1);
+-- -- Ожидается ERROR: state 2 entry is missing before state 1 entry in time_tracking
+-- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
+-- VALUES (8, 'tamelabe', '2023-07-02', '11:00:00', 1);
+
+-- Тест: количество записей входа и выхода за день не совпадает
+-- Ожидается ERROR: in time_tracking the number of state 1 and state 2 entries must be equal for each peer and date
+-- TODO test it
+
+-- Тест: добавление записи со статусом выхода без входа (первая запись за день)
+-- Ожидается ERROR:
+-- TODO write a function
+
+-- Тест: добавление записи со статусом выхода без входа (не первая запись за день)
+-- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
+-- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
+-- VALUES (8, 'tamelabe', '2023-07-01', '19:00:00', 2);
 
 -- Проверяет на завершение родительского таска для добавляемой записи проверки в таблицу check
 CREATE OR REPLACE FUNCTION check_parent_task_in_xp() RETURNS trigger AS
@@ -565,6 +619,12 @@ CREATE TRIGGER check_xp_completed_trigger
     FOR EACH ROW
 EXECUTE FUNCTION check_parent_task_in_xp();
 
+-- Тест: родительский таск для добавляемой записи в checks не выполнен
+-- Ожидается ERROR: parent task is not completed
+-- INSERT INTO checks (id, peer, task, date_check)
+-- VALUES (7, 'manhunte', 'C3_s21_stringplus', '2023-07-02');
+
+
 -- Проверяет, что добавляемая запись проверки в таблицу p2p не является третьей
 CREATE OR REPLACE FUNCTION p2p_check_two_records() RETURNS TRIGGER AS
 $$
@@ -577,19 +637,28 @@ BEGIN
     WHERE check_id = NEW.check_id;
 
     IF count_records >= 2 THEN
-        RAISE EXCEPTION 'maximum number of records with the same check_id reached';
+        RAISE EXCEPTION 'maximum number of records with the same check_id in p2p reached';
     END IF;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Тест: попытка добавить третью запись для проверки в таблицу p2p
+-- -- Если не было выполнено ранее, выполнить:
+-- -- INSERT INTO checks (id, peer, task, date_check)
+-- -- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
+-- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- -- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
+-- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- -- VALUES (12, 6, 'tamelabe', 'success', '2023-07-02 22:40:00.000000');
+-- Ожидается ERROR: maximum number of records with the same check_id reached
+-- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- VALUES (13, 6, 'tamelabe', 'failure', '2023-07-05 22:50:00.000000');
+
 -- Проверяет, что добавляемая запись проверки в таблицу p2p не является третьей
 CREATE TRIGGER p2p_check_two_records_trigger
-    BEFORE
-        INSERT
-        OR
-        UPDATE
+    BEFORE INSERT OR UPDATE
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION p2p_check_two_records();
@@ -606,7 +675,7 @@ BEGIN
     WHERE check_id = NEW.check_id;
 
     IF count_records >= 2 THEN
-        RAISE EXCEPTION 'maximum number of records with the same check_id reached';
+        RAISE EXCEPTION 'maximum number of records with the same check_id in verter reached';
     END IF;
 
     RETURN NEW;
@@ -615,48 +684,23 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет, что добавляемая запись проверки в таблицу verter не является третьей
 CREATE TRIGGER verter_check_two_records_trigger
-    BEFORE
-        INSERT
-        OR
-        UPDATE
+    BEFORE INSERT OR UPDATE
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION verter_check_two_records();
 
-
-
--- -- Экспорт данных в CSV файл
--- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
--- SELECT ExportTableToCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
--- SELECT ExportTableToCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
--- SELECT ExportTableToCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
--- SELECT ExportTableToCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
--- SELECT ExportTableToCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
--- SELECT ExportTableToCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
--- SELECT ExportTableToCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
--- SELECT ExportTableToCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
--- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
-
--- -- Импорт данных из CSV файла
--- SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
--- SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
--- SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
--- SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
--- SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
--- SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
--- SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
--- SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
--- SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
--- SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
-
--- -- Экспорт данных в CSV файл
--- SELECT ExportTableToCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
--- SELECT ExportTableToCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
--- SELECT ExportTableToCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
--- SELECT ExportTableToCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
--- SELECT ExportTableToCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
--- SELECT ExportTableToCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
--- SELECT ExportTableToCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
--- SELECT ExportTableToCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
--- SELECT ExportTableToCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
--- SELECT ExportTableToCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
+-- Тест: попытка добавить третью запись для проверки в таблицу verter
+-- -- Если не было выполнено ранее, выполнить:
+-- -- INSERT INTO checks (id, peer, task, date_check)
+-- -- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
+-- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- -- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
+-- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- -- VALUES (12, 6, 'tamelabe', 'success', '2023-07-02 22:40:00.000000');
+-- -- INSERT INTO verter (id, check_id, state_check, time_check)
+-- -- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
+-- -- INSERT INTO verter (id, check_id, state_check, time_check)
+-- -- VALUES (8, 6, 'success', '2023-07-02 22:46:00.000000');
+-- Ожидается ERROR: maximum number of records with the same check_id reached
+-- INSERT INTO verter (id, check_id, state_check, time_check)
+-- VALUES (8, 5, 'failure', '2023-07-05 22:47:00.000000');
