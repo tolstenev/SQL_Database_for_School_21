@@ -1,6 +1,7 @@
 -- Задачи:
 -- [->] добавить тестовые инсерты на проверку ограничений и триггеров
 -- [->] добавить комментарии
+-- подумать о триггерах на удаление
 
 -- CREATE DATABASE info_21;
 
@@ -136,7 +137,9 @@ CREATE TABLE time_tracking
     time_track    time not null,
     state_track   int  not null,
     CONSTRAINT fk_time_tracking_peer_nickname FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
-    CONSTRAINT ch_state_track CHECK (state_track IN (1, 2))
+    CONSTRAINT ch_state_track CHECK (state_track IN (1, 2)),
+    CONSTRAINT ch_date_track CHECK (date_track <= CURRENT_DATE),
+    CONSTRAINT ch_time_track CHECK (time_track <= CURRENT_TIME)
 );
 
 
@@ -527,8 +530,8 @@ BEGIN
       AND date_track = NEW.date_track
       AND state_track = 2;
 
-    IF count_state_1 = 0 AND count_state_2 = 0 THEN
-        RETURN NEW;
+    IF count_state_1 != count_state_2 THEN
+        RAISE EXCEPTION 'in time_tracking the number of state 1 and state 2 entries must be equal for each peer and date';
     END IF;
 
     IF count_state_1 = count_state_2 THEN
@@ -548,15 +551,6 @@ BEGIN
         END IF;
     END IF;
 
-    IF count_state_1 > count_state_2 THEN
-        RAISE EXCEPTION 'state 2 entry is missing before state 1 entry in time_tracking';
-        -- RAISE EXCEPTION 'in time_tracking the number of state 1 and state 2 entries must be equal for each peer and date';
-    END IF;
-
---     IF count_state_1 != count_state_2 THEN
---         RAISE EXCEPTION 'in time_tracking the number of state 1 and state 2 entries must be equal for each peer and date';
---     END IF;
-
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
@@ -569,22 +563,19 @@ CREATE TRIGGER trigger_check_time_tracking
 EXECUTE FUNCTION check_time_tracking();
 
 -- Тест: добавление записи со статусом входа без выхода
+-- Ожидается ERROR: state 2 entry is missing before state 1 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
 -- VALUES (7, 'tamelabe', '2023-07-02', '10:00:00', 1);
--- -- Ожидается ERROR: state 2 entry is missing before state 1 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
 -- VALUES (8, 'tamelabe', '2023-07-02', '11:00:00', 1);
 
--- Тест: количество записей входа и выхода за день не совпадает
--- Ожидается ERROR: in time_tracking the number of state 1 and state 2 entries must be equal for each peer and date
--- TODO test it
-
 -- Тест: добавление записи со статусом выхода без входа (первая запись за день)
--- Ожидается ERROR:
--- TODO write a function
+-- -- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
+-- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
+-- VALUES (8, 'tamelabe', '2023-07-02', '19:00:00', 2);
 
--- Тест: добавление записи со статусом выхода без входа (не первая запись за день)
--- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
+-- -- Тест: добавление записи со статусом выхода без входа (не первая запись за день)
+-- -- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
 -- VALUES (8, 'tamelabe', '2023-07-01', '19:00:00', 2);
 
