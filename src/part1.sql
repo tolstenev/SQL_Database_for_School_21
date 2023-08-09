@@ -1,9 +1,6 @@
--- TODO: проверить все ограничения в таблицах
--- Таблица time_tracking. Состояние (1 - пришел, 2 - вышел). В течение одного дня должно быть одинаковое количество записей с состоянием 1 и состоянием 2 для каждого пира. Записи должны идти в чередующемся порядке 1, 2, 1, 2 и т.д.
-
 -- Задачи:
 -- добавить тестовые инсерты на проверку ограничений и триггеров
--- добавить комментарии
+-- [->] добавить комментарии
 
 -- CREATE DATABASE info_21;
 
@@ -51,9 +48,9 @@ CREATE TABLE tasks
 CREATE TABLE checks
 (
     id         serial primary key,
-    peer       varchar(16),
-    task       varchar(32),
-    date_check date,
+    peer       varchar(16) not null,
+    task       varchar(32) not null,
+    date_check date        not null,
     CONSTRAINT ch_checks_current_date CHECK (date_check <= current_date),
     CONSTRAINT fk_checks_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
     CONSTRAINT fk_checks_task FOREIGN KEY (task) REFERENCES tasks (title)
@@ -63,10 +60,10 @@ CREATE TABLE checks
 CREATE TABLE p2p
 (
     id            serial primary key,
-    check_id      int not null,
-    checking_peer varchar(16),
-    state_check   state_of_check,
-    time_check    timestamp,
+    check_id      int            not null,
+    checking_peer varchar(16)    not null,
+    state_check   state_of_check not null,
+    time_check    timestamp      not null,
     CONSTRAINT ch_p2p_current_time CHECK (time_check <= current_timestamp),
     CONSTRAINT fk_p2p_check_id FOREIGN KEY (check_id) REFERENCES checks (id),
     CONSTRAINT fk_p2p_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
@@ -77,9 +74,9 @@ CREATE TABLE p2p
 CREATE TABLE verter
 (
     id          serial primary key,
-    check_id    int,
-    state_check state_of_check,
-    time_check  timestamp,
+    check_id    int            not null,
+    state_check state_of_check not null,
+    time_check  timestamp      not null,
     CONSTRAINT ch_verter_current_time CHECK (time_check <= current_timestamp),
     CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
@@ -88,9 +85,9 @@ CREATE TABLE verter
 CREATE TABLE transferred_points
 (
     id            serial primary key,
-    checking_peer varchar(16),
-    checked_peer  varchar(16),
-    points_amount int default 1,
+    checking_peer varchar(16)   not null,
+    checked_peer  varchar(16)   not null,
+    points_amount int default 1 not null,
     CONSTRAINT ch_range_points_amount CHECK (points_amount >= 0),
     CONSTRAINT fk_transferred_points_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
     CONSTRAINT fk_transferred_points_checked_peer FOREIGN KEY (checked_peer) REFERENCES peers (nickname)
@@ -100,8 +97,8 @@ CREATE TABLE transferred_points
 CREATE TABLE friends
 (
     id    serial primary key,
-    peer1 varchar(16),
-    peer2 varchar(16),
+    peer1 varchar(16) not null,
+    peer2 varchar(16) not null,
     CONSTRAINT ch_prevent_self_friend CHECK (peer1 != peer2),
     CONSTRAINT fk_friends_peer1 FOREIGN KEY (peer1) REFERENCES peers (nickname),
     CONSTRAINT fk_friends_peer2 FOREIGN KEY (peer2) REFERENCES peers (nickname),
@@ -112,8 +109,8 @@ CREATE TABLE friends
 CREATE TABLE recommendations
 (
     id               serial primary key,
-    peer             varchar(16),
-    recommended_peer varchar(16),
+    peer             varchar(16) not null,
+    recommended_peer varchar(16) not null,
     CONSTRAINT ch_prevent_self_recommendation CHECK (peer != recommended_peer),
     CONSTRAINT fk_recommendations_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
     CONSTRAINT fk_recommendations_recommended_peer FOREIGN KEY (recommended_peer) REFERENCES peers (nickname),
@@ -124,8 +121,8 @@ CREATE TABLE recommendations
 CREATE TABLE xp
 (
     id        serial primary key,
-    check_id  int,
-    xp_amount int,
+    check_id  int not null,
+    xp_amount int not null,
     CONSTRAINT ch_xp_amount_range CHECK (xp_amount >= 0),
     CONSTRAINT fk_xp_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
@@ -135,15 +132,78 @@ CREATE TABLE time_tracking
 (
     id            serial primary key,
     peer_nickname varchar(16),
-    date_track          date,
-    time_track          time,
-    state_track         int,
+    date_track    date not null,
+    time_track    time not null,
+    state_track   int  not null,
     CONSTRAINT fk_time_tracking_peer_nickname FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
     CONSTRAINT ch_state_track CHECK (state_track IN (1, 2))
 );
 
+
+-- ------------------------------------ ФУНКЦИИ ИМПОРТА И ЭКСПОРТА ------------------------------------ --
+
+-- Функция импорта данных из CSV файла в указанную таблицу
+CREATE OR REPLACE FUNCTION ImportTableFromCSV(IN table_name TEXT, IN
+    delimiter CHAR, IN file_path TEXT) RETURNS VOID
+    LANGUAGE plpgsql AS
+$$
+BEGIN
+    EXECUTE format('COPY %I FROM %L WITH (FORMAT CSV, DELIMITER %L, HEADER)', table_name, file_path, delimiter);
+END;
+$$;
+
+-- Функция экспорта данных из указанной таблицы в CSV файл
+CREATE OR REPLACE FUNCTION ExportTableToCSV(IN table_name TEXT, IN
+    delimiter CHAR, IN file_path TEXT) RETURNS VOID
+    LANGUAGE plpgsql AS
+$$
+BEGIN
+    EXECUTE format('COPY %I TO %L WITH (FORMAT CSV, DELIMITER %L, HEADER)', table_name, file_path, delimiter);
+END;
+$$;
+
+-- -- Импорт данных из CSV файла
+SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
+SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
+SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
+SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
+SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
+SELECT ImportTableFromCSV('transferred_points', ',',
+                          '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
+SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
+SELECT ImportTableFromCSV('recommendations', ',',
+                          '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
+SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
+SELECT ImportTableFromCSV('time_tracking', ',',
+                          '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
+
+
 -- ------------------------------------ ТРИГГЕРЫ ------------------------------------ --
 
+-- Проверяет, что parent_task не может быть null (кроме "Pool")
+CREATE OR REPLACE FUNCTION check_parent_task()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF NEW.title != 'Pool' AND NEW.parent_task IS NULL THEN
+        RAISE EXCEPTION 'parent_task must be not null';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Проверяет, что parent_task не может быть null (кроме "Pool")
+CREATE TRIGGER trigger_check_parent_task
+    BEFORE INSERT OR UPDATE
+    ON tasks
+    FOR EACH ROW
+EXECUTE FUNCTION check_parent_task();
+
+-- Проверка что parent_task не может быть null
+-- INSERT INTO tasks (title, max_xp)
+-- VALUES ('Intra', 100500);
+
+-- Проверяет, что первая запись в p2p для соответствующей проверки должна иметь статус 'start'
 CREATE OR REPLACE FUNCTION check_state_first_record_in_p2p()
     RETURNS TRIGGER AS
 $$
@@ -163,12 +223,18 @@ END;
 $$
     LANGUAGE plpgsql;
 
+-- Проверяет, что первая запись в p2p для соответствующей проверки должна иметь статус 'start'
 CREATE TRIGGER check_state_first_record_in_p2p
     BEFORE INSERT
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_p2p();
 
+-- Проверка на первую запись не со статусом 'start'
+-- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- VALUES (11, 6, 'tamelabe', 'failure', '2023-07-05 22:30:00.000000');
+
+-- Проверяет, что запись добавляемая не раньше чем запись start для соответствующей проверки
 CREATE OR REPLACE FUNCTION check_time_second_record_in_p2p()
     RETURNS TRIGGER AS
 $$
@@ -177,23 +243,32 @@ BEGIN
             SELECT 1
             FROM p2p
             WHERE state_check = 'start'
+              AND check_id = NEW.check_id
               AND NEW.time_check <= time_check
         ) THEN
-        RAISE EXCEPTION 'invalid time for the new p2p record';
+        RAISE EXCEPTION 'time_check for the new p2p record should be after start record';
     END IF;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Проверяет, что запись добавляемая не раньше чем запись start для соответствующей проверки
 CREATE TRIGGER trigger_check_time_second_record_in_p2p
     BEFORE INSERT
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_p2p();
 
+-- Проверка, что запись добавляемая не раньше чем запись start для соответствующей проверки
+INSERT INTO checks (id, peer, task, date_check)
+VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
+INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+VALUES (11, 6, 'tamelabe', 'start', '2023-07-05 22:30:00.000000');
+-- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- VALUES (12, 6, 'tamelabe', 'failure', '2023-07-05 10:30:00.000000');
 
-
+-- Проверяет, что проверка verter'ом проходит в тот же день, что и p2p
 CREATE OR REPLACE FUNCTION check_verter_date()
     RETURNS TRIGGER AS
 $$
@@ -211,12 +286,18 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Проверяет, что проверка verter'ом проходит в тот же день, что и p2p
 CREATE TRIGGER trigger_check_verter_date
     BEFORE INSERT
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_verter_date();
 
+-- Проверяет, что проверка verter'ом проходит в тот же день, что и p2p
+-- INSERT INTO verter (id, check_id, state_check, time_check)
+-- VALUES (7, 6, 'start', '2023-07-05 22:45:00.000000');
+
+-- Проверяет, что первая запись в verter имеет статус 'start'
 CREATE OR REPLACE FUNCTION check_state_first_record_in_verter()
     RETURNS TRIGGER AS
 $$
@@ -236,11 +317,16 @@ END;
 $$
     LANGUAGE plpgsql;
 
+-- Проверяет, что первая запись в verter имеет статус 'start'
 CREATE TRIGGER check_state_first_record_in_verter
     BEFORE INSERT
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_verter();
+
+-- Проверка, что первая запись в verter имеет статус 'start'
+-- INSERT INTO verter (id, check_id, state_check, time_check)
+-- VALUES (7, 6, 'failure', '2023-07-02 22:45:00.000000');
 
 CREATE OR REPLACE FUNCTION check_time_second_record_in_verter()
     RETURNS TRIGGER AS
@@ -264,13 +350,6 @@ CREATE TRIGGER trigger_check_time_second_record_in_verter
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_verter();
-
--- -- Проверка на запрет дублирования в таблице friends
--- INSERT INTO friends (id, peer1, peer2)
--- VALUES (6, 'manhunte', 'cherigra');
--- -- Проверка на запрет дружбы с самим собой
--- INSERT INTO friends (id, peer1, peer2)
--- VALUES (7, 'manhunte', 'manhunte');
 
 
 CREATE OR REPLACE FUNCTION check_recommendation()
@@ -301,6 +380,13 @@ EXECUTE FUNCTION check_recommendation();
 -- VALUES (6, 'cherigra', 'manhunte');
 -- -- Проверка на запрет дружбы с самим recommendations
 -- INSERT INTO recommendations (id, peer, recommended_peer)
+-- VALUES (7, 'manhunte', 'manhunte');
+
+-- -- Проверка на запрет дублирования в таблице friends
+-- INSERT INTO friends (id, peer1, peer2)
+-- VALUES (6, 'manhunte', 'cherigra');
+-- -- Проверка на запрет дружбы с самим собой
+-- INSERT INTO friends (id, peer1, peer2)
 -- VALUES (7, 'manhunte', 'manhunte');
 
 CREATE OR REPLACE FUNCTION check_time_tracking()
@@ -335,7 +421,8 @@ BEGIN
     IF count_state_1 = count_state_2 THEN
         IF (SELECT state_track
             FROM time_tracking
-            WHERE peer_nickname = NEW.peer_nickname AND date_track = NEW.date_track
+            WHERE peer_nickname = NEW.peer_nickname
+              AND date_track = NEW.date_track
             ORDER BY time_track DESC
             LIMIT 1) = 1 THEN
             IF NEW.state_track = 1 THEN
@@ -477,37 +564,6 @@ CREATE TRIGGER check_verter_time_trigger
     FOR EACH ROW
 EXECUTE FUNCTION check_verter_time();
 
--- Функция импорта данных из CSV файла в указанную таблицу
-CREATE OR REPLACE FUNCTION ImportTableFromCSV(IN table_name TEXT, IN
-    delimiter CHAR, IN file_path TEXT) RETURNS VOID
-    LANGUAGE plpgsql AS
-$$
-BEGIN
-    EXECUTE format('COPY %I FROM %L WITH (FORMAT CSV, DELIMITER %L, HEADER)', table_name, file_path, delimiter);
-END;
-$$;
-
--- Функция экспорта данных из указанной таблицы в CSV файл
-CREATE OR REPLACE FUNCTION ExportTableToCSV(IN table_name TEXT, IN
-    delimiter CHAR, IN file_path TEXT) RETURNS VOID
-    LANGUAGE plpgsql AS
-$$
-BEGIN
-    EXECUTE format('COPY %I TO %L WITH (FORMAT CSV, DELIMITER %L, HEADER)', table_name, file_path, delimiter);
-END;
-$$;
-
--- -- Импорт данных из CSV файла
-SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
-SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
-SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
-SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
-SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
-SELECT ImportTableFromCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
-SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
-SELECT ImportTableFromCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
-SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
-SELECT ImportTableFromCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
 -- -- Экспорт данных в CSV файл
 -- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
