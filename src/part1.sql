@@ -1,5 +1,5 @@
 -- Задачи:
--- добавить тестовые инсерты на проверку ограничений и триггеров
+-- [->] добавить тестовые инсерты на проверку ограничений и триггеров
 -- [->] добавить комментарии
 
 -- CREATE DATABASE info_21;
@@ -199,9 +199,41 @@ CREATE TRIGGER trigger_check_parent_task
     FOR EACH ROW
 EXECUTE FUNCTION check_parent_task();
 
--- Проверка что parent_task не может быть null
+-- Тест: parent_task не может быть null
+-- Ожидается ERROR: parent_task must be not null
 -- INSERT INTO tasks (title, max_xp)
 -- VALUES ('Intra', 100500);
+
+-- Проверяет, что добавляемая в p2p проверка имеет такую же дату, что и в checks
+CREATE OR REPLACE FUNCTION check_date_p2p()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF NOT EXISTS(
+            SELECT 1
+            FROM checks
+            WHERE id = NEW.check_id
+              AND date_check = NEW.time_check::date
+        ) THEN
+        RAISE EXCEPTION 'new record in p2p must have the same date in checks';
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Проверяет, что добавляемая в p2p проверка имеет такую же дату, что и в checks
+CREATE TRIGGER trigger_check_date_p2p
+    BEFORE INSERT OR UPDATE
+    ON p2p
+    FOR EACH ROW
+EXECUTE FUNCTION check_date_p2p();
+
+-- Тест: добавляемая в p2p проверка имеет дату, отличающуюся от checks
+-- Ожидание ERROR: new record in check must have the same date in p2p
+-- INSERT INTO checks (id, peer, task, date_check)
+-- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
+-- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- VALUES (11, 6, 'tamelabe', 'start', '2023-07-03 22:30:00.000000');
 
 -- Проверяет, что первая запись в p2p для соответствующей проверки должна иметь статус 'start'
 CREATE OR REPLACE FUNCTION check_state_first_record_in_p2p()
@@ -230,11 +262,12 @@ CREATE TRIGGER check_state_first_record_in_p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_p2p();
 
--- Проверка на первую запись не со статусом 'start'
+-- Тест на первую запись не со статусом 'start' в p2p
+-- Ожидается ERROR: only records with state "start" are allowed when check_id does not exist in p2p table
 -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
 -- VALUES (11, 6, 'tamelabe', 'failure', '2023-07-05 22:30:00.000000');
 
--- Проверяет, что запись добавляемая не раньше чем запись start для соответствующей проверки
+-- Проверяет, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
 CREATE OR REPLACE FUNCTION check_time_second_record_in_p2p()
     RETURNS TRIGGER AS
 $$
@@ -253,22 +286,24 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Проверяет, что запись добавляемая не раньше чем запись start для соответствующей проверки
+-- Проверяет, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
 CREATE TRIGGER trigger_check_time_second_record_in_p2p
     BEFORE INSERT
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_p2p();
 
--- Проверка, что запись добавляемая не раньше чем запись start для соответствующей проверки
-INSERT INTO checks (id, peer, task, date_check)
-VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
-INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
-VALUES (11, 6, 'tamelabe', 'start', '2023-07-05 22:30:00.000000');
+-- Тест, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
+-- INSERT INTO checks (id, peer, task, date_check)
+-- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
 -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (12, 6, 'tamelabe', 'failure', '2023-07-05 10:30:00.000000');
+-- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
+-- Ожидается ERROR: time_check for the new p2p record should be after start record
+-- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- VALUES (12, 6, 'tamelabe', 'failure', '2023-07-02 10:30:00.000000');
 
--- Проверяет, что проверка verter'ом проходит в тот же день, что и p2p
+
+-- Проверяет, что verter проверяет в тот же день, что и p2p
 CREATE OR REPLACE FUNCTION check_verter_date()
     RETURNS TRIGGER AS
 $$
@@ -293,9 +328,11 @@ CREATE TRIGGER trigger_check_verter_date
     FOR EACH ROW
 EXECUTE FUNCTION check_verter_date();
 
--- Проверяет, что проверка verter'ом проходит в тот же день, что и p2p
+-- Тест, что проверка verter'ом проходит в тот же день, что и p2p
+-- Ожидается ERROR: the record must have the same date in checks table
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (7, 6, 'start', '2023-07-05 22:45:00.000000');
+
 
 -- Проверяет, что первая запись в verter имеет статус 'start'
 CREATE OR REPLACE FUNCTION check_state_first_record_in_verter()
@@ -324,32 +361,84 @@ CREATE TRIGGER check_state_first_record_in_verter
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_verter();
 
--- Проверка, что первая запись в verter имеет статус 'start'
+-- Тест, что первая запись в verter имеет статус 'start'
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (7, 6, 'failure', '2023-07-02 22:45:00.000000');
 
+-- Проверяет, что время проверки verter'ом не раньше, чем окончание проверки p2p
+CREATE OR REPLACE FUNCTION check_verter_time() RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+        -- Запрашиваем только одну строку с единственным значением 1.
+        -- Это делается для оптимизации запроса, поскольку нам не нужны фактические данные из таблицы,
+        -- нам нужно только узнать, есть ли хотя бы одна запись, удовлетворяющая условию.
+            SELECT 1
+            FROM p2p
+            WHERE p2p.check_id = NEW.check_id
+              AND p2p.time_check > NEW.time_check
+        ) THEN
+        RAISE EXCEPTION 'verter checking time cannot be earlier than p2p checking time';
+    END IF;
+
+    RETURN NEW;
+END ;
+$$ LANGUAGE plpgsql;
+
+-- Проверяет, что время проверки verter'ом не раньше, чем окончание проверки p2p
+CREATE TRIGGER check_verter_time_trigger
+    BEFORE
+        INSERT
+        OR
+        UPDATE
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_verter_time();
+
+-- Тест, что время проверки verter'ом не раньше, чем окончание проверки p2p
+-- INSERT INTO verter (id, check_id, state_check, time_check)
+-- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
+
+-- Тест, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
 CREATE OR REPLACE FUNCTION check_time_second_record_in_verter()
     RETURNS TRIGGER AS
 $$
 BEGIN
     IF EXISTS(
-            SELECT 1
+            SELECT time_check
             FROM verter
             WHERE state_check = 'start'
+              AND NEW.check_id = check_id
               AND NEW.time_check <= time_check
         ) THEN
-        RAISE EXCEPTION 'invalid time for the new verter table record';
+        RAISE EXCEPTION 'time_check for the new verter record should be after start record';
     END IF;
 
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
 
+-- Тест, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
 CREATE TRIGGER trigger_check_time_second_record_in_verter
     BEFORE INSERT
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_verter();
+
+-- Тест, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
+-- -- Если не было выполнено ранее, выполнить:
+-- -- INSERT INTO checks (id, peer, task, date_check)
+-- -- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
+-- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- -- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
+-- Тест:
+-- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- VALUES (12, 6, 'tamelabe', 'success', '2023-07-02 22:40:00.000000');
+-- INSERT INTO verter (id, check_id, state_check, time_check)
+-- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
+-- Ожидается ERROR: time_check for the new verter record should be after start record
+-- INSERT INTO verter (id, check_id, state_check, time_check)
+-- VALUES (7, 6, 'failure', '2023-07-02 22:42:00.000000');
 
 
 CREATE OR REPLACE FUNCTION check_recommendation()
@@ -375,17 +464,17 @@ CREATE TRIGGER trigger_check_recommendation
     FOR EACH ROW
 EXECUTE FUNCTION check_recommendation();
 
--- -- Проверка на запрет дублирования в таблице recommendations
+-- -- Тест на запрет дублирования в таблице recommendations
 -- INSERT INTO recommendations (id, peer, recommended_peer)
 -- VALUES (6, 'cherigra', 'manhunte');
--- -- Проверка на запрет дружбы с самим recommendations
+-- -- Тест на запрет дружбы с самим recommendations
 -- INSERT INTO recommendations (id, peer, recommended_peer)
 -- VALUES (7, 'manhunte', 'manhunte');
 
--- -- Проверка на запрет дублирования в таблице friends
+-- -- Тест на запрет дублирования в таблице friends
 -- INSERT INTO friends (id, peer1, peer2)
 -- VALUES (6, 'manhunte', 'cherigra');
--- -- Проверка на запрет дружбы с самим собой
+-- -- Тест на запрет дружбы с самим собой
 -- INSERT INTO friends (id, peer1, peer2)
 -- VALUES (7, 'manhunte', 'manhunte');
 
@@ -534,35 +623,6 @@ CREATE TRIGGER verter_check_two_records_trigger
     FOR EACH ROW
 EXECUTE FUNCTION verter_check_two_records();
 
--- Проверяет, что время проверки Verter'ом не раньше, чем окончание проверки P2P
-CREATE OR REPLACE FUNCTION check_verter_time() RETURNS TRIGGER AS
-$$
-BEGIN
-    IF EXISTS(
-        -- Запрашиваем только одну строку с единственным значением 1.
-        -- Это делается для оптимизации запроса, поскольку нам не нужны фактические данные из таблицы,
-        -- нам нужно только узнать, есть ли хотя бы одна запись, удовлетворяющая условию.
-            SELECT 1
-            FROM p2p
-            WHERE p2p.check_id = NEW.check_id
-              AND p2p.time_check > NEW.time_check
-        ) THEN
-        RAISE EXCEPTION 'verter checking time cannot be earlier than p2p checking time';
-    END IF;
-
-    RETURN NEW;
-END ;
-$$ LANGUAGE plpgsql;
-
--- Проверяет, что время проверки Verter'ом не раньше, чем окончание проверки P2P
-CREATE TRIGGER check_verter_time_trigger
-    BEFORE
-        INSERT
-        OR
-        UPDATE
-    ON verter
-    FOR EACH ROW
-EXECUTE FUNCTION check_verter_time();
 
 
 -- -- Экспорт данных в CSV файл
