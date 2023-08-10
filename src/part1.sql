@@ -1,7 +1,11 @@
 -- Задачи:
 -- [->] добавить тестовые инсерты на проверку ограничений и триггеров
 -- [->] добавить комментарии
--- подумать о триггерах на удаление
+-- подумать о триггерах на удаление в time_tracking
+-- подумать о триггерах на удаление в verter
+-- подумать о триггерах на удаление в p2p
+-- подумать о триггерах на удаление в checks
+
 
 -- CREATE DATABASE info_21;
 
@@ -138,8 +142,7 @@ CREATE TABLE time_tracking
     state_track   int  not null,
     CONSTRAINT fk_time_tracking_peer_nickname FOREIGN KEY (peer_nickname) REFERENCES peers (nickname),
     CONSTRAINT ch_state_track CHECK (state_track IN (1, 2)),
-    CONSTRAINT ch_date_track CHECK (date_track <= CURRENT_DATE),
-    CONSTRAINT ch_time_track CHECK (time_track <= CURRENT_TIME)
+    CONSTRAINT ch_date_track CHECK (date_track <= CURRENT_DATE)
 );
 
 
@@ -242,6 +245,35 @@ EXECUTE FUNCTION check_parent_task();
 -- INSERT INTO tasks (title, max_xp)
 -- VALUES ('Intra', 100500);
 
+
+-- Проверяет перед удалением записи, что title не является для какой-либо другой записи parent_task
+CREATE OR REPLACE FUNCTION check_parent_task_before_delete()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+            SELECT 1
+            FROM tasks
+            WHERE parent_task = OLD.title
+        ) THEN
+        RAISE EXCEPTION 'cannot delete task that is a parent task for other tasks';
+    END IF;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Проверяет перед удалением записи, что title не является для какой-либо другой записи parent_task
+CREATE TRIGGER trigger_check_parent_task_before_delete
+    BEFORE DELETE
+    ON tasks
+    FOR EACH ROW
+EXECUTE FUNCTION check_parent_task_before_delete();
+
+-- Тест на удаление записи с зависимостью parent_task
+-- Ожидается ERROR: cannot delete task that is a parent task for other tasks
+-- DELETE FROM tasks WHERE title = 'C2_Simple_Bash_Utils';
+
+
 -- Проверяет, что добавляемая в p2p проверка имеет такую же дату, что и в checks
 CREATE OR REPLACE FUNCTION check_date_p2p()
     RETURNS TRIGGER AS
@@ -272,6 +304,7 @@ EXECUTE FUNCTION check_date_p2p();
 -- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
 -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
 -- VALUES (11, 6, 'tamelabe', 'start', '2023-07-03 22:30:00.000000');
+
 
 -- Проверяет, что первая запись в p2p для соответствующей проверки должна иметь статус 'start'
 CREATE OR REPLACE FUNCTION check_state_first_record_in_p2p()
@@ -304,6 +337,7 @@ EXECUTE FUNCTION check_state_first_record_in_p2p();
 -- Ожидается ERROR: only records with state "start" are allowed when check_id does not exist in p2p table
 -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
 -- VALUES (11, 6, 'tamelabe', 'failure', '2023-07-05 22:30:00.000000');
+
 
 -- Проверяет, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
 CREATE OR REPLACE FUNCTION check_time_second_record_in_p2p()
@@ -403,6 +437,7 @@ EXECUTE FUNCTION check_state_first_record_in_verter();
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (7, 6, 'failure', '2023-07-02 22:45:00.000000');
 
+
 -- Проверяет, что время проверки verter'ом не раньше, чем окончание проверки p2p
 CREATE OR REPLACE FUNCTION check_verter_time() RETURNS TRIGGER AS
 $$
@@ -437,7 +472,8 @@ EXECUTE FUNCTION check_verter_time();
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
 
--- Тест, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
+
+-- Проверяет, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
 CREATE OR REPLACE FUNCTION check_time_second_record_in_verter()
     RETURNS TRIGGER AS
 $$
@@ -456,7 +492,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Тест, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
+-- Проверяет, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
 CREATE TRIGGER trigger_check_time_second_record_in_verter
     BEFORE INSERT
     ON verter
@@ -507,6 +543,7 @@ EXECUTE FUNCTION check_recommendation();
 -- Тест: рекомендуемый пир не проводил проверку рекомендующего
 -- INSERT INTO recommendations (id, peer, recommended_peer)
 -- VALUES (6, 'manhunte', 'cherigra');
+
 
 -- Проверяет корректность записей в time_tracking
 CREATE OR REPLACE FUNCTION check_time_tracking()
@@ -570,14 +607,15 @@ EXECUTE FUNCTION check_time_tracking();
 -- VALUES (8, 'tamelabe', '2023-07-02', '11:00:00', 1);
 
 -- Тест: добавление записи со статусом выхода без входа (первая запись за день)
--- -- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
+-- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
 -- VALUES (8, 'tamelabe', '2023-07-02', '19:00:00', 2);
 
--- -- Тест: добавление записи со статусом выхода без входа (не первая запись за день)
--- -- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
+-- Тест: добавление записи со статусом выхода без входа (не первая запись за день)
+-- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
 -- VALUES (8, 'tamelabe', '2023-07-01', '19:00:00', 2);
+
 
 -- Проверяет на завершение родительского таска для добавляемой записи проверки в таблицу check
 CREATE OR REPLACE FUNCTION check_parent_task_in_xp() RETURNS trigger AS
@@ -695,3 +733,112 @@ EXECUTE FUNCTION verter_check_two_records();
 -- Ожидается ERROR: maximum number of records with the same check_id reached
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (8, 5, 'failure', '2023-07-05 22:47:00.000000');
+
+-- Проверяет, что если удаляемая запись содержит статус 'start',
+-- то для неё нет записи со статусом 'success' или 'failure'
+CREATE OR REPLACE FUNCTION check_verter_records_before_delete()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF (OLD.state_check = 'start') THEN
+        IF EXISTS(
+                SELECT 1
+                FROM verter
+                WHERE check_id = OLD.check_id
+                  AND (state_check = 'success' OR state_check = 'failure')
+            ) THEN
+            RAISE EXCEPTION 'сannot delete "start" record from verter with corresponding "success" or "failure" record for the same check_id';
+        END IF;
+    END IF;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Проверяет, что если удаляемая запись содержит статус 'start',
+-- то для неё нет записи со статусом 'success' или 'failure'
+CREATE TRIGGER trigger_check_verter_records_before_delete
+    BEFORE DELETE
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_verter_records_before_delete();
+
+-- Тест: удаляется запись со статусом 'start', для которой есть вторая запись
+-- Ожидается ERROR: сannot delete "start" record with corresponding "success" or "failure" record for the same check_id
+-- DELETE FROM verter WHERE id = 5;
+
+
+-- Проверяет, что для удаляемой в p2p записи нет соответствующих проверок verter'ом,
+-- и что если удаляемая запись содержит статус 'start',
+-- то для неё нет записи со статусом 'success' или 'failure'
+CREATE OR REPLACE FUNCTION check_p2p_records_before_delete()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    IF EXISTS(
+            SELECT 1
+            FROM verter
+            WHERE check_id = OLD.check_id
+        ) THEN
+        RAISE EXCEPTION 'cannot delete record from p2p with existing verter records for the same check_id';
+    END IF;
+
+    IF (OLD.state_check = 'start') THEN
+        IF EXISTS(
+                SELECT 1
+                FROM p2p
+                WHERE check_id = OLD.check_id
+                  AND (state_check = 'success' OR state_check = 'failure')
+            ) THEN
+            RAISE EXCEPTION 'сannot delete "start" record from p2p with corresponding "success" or "failure" record for the same check_id';
+        END IF;
+    END IF;
+
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Проверяет, что для удаляемой в p2p записи нет соответствующих проверок verter'ом,
+-- и что если удаляемая запись содержит статус 'start',
+-- то для неё нет записи со статусом 'success' или 'failure'
+CREATE TRIGGER trigger_check_p2p_records_before_delete
+    BEFORE DELETE
+    ON p2p
+    FOR EACH ROW
+EXECUTE FUNCTION check_p2p_records_before_delete();
+
+-- Тест: удаляемая запись содержит записи в verter
+-- Ожидается: cannot delete record from p2p with existing verter records for the same check_id
+-- DELETE FROM p2p WHERE id = 4;
+
+-- Тест: удаляется запись со статусом 'start', для которой есть вторая запись
+-- Ожидается: сannot delete "start" record from p2p with corresponding "success" or "failure" record for the same check_id
+-- DELETE FROM p2p WHERE id = 5;
+
+-- Проверяет, что для удаляемой записи нет проверок p2p и verter
+CREATE OR REPLACE FUNCTION check_checks_records_before_delete()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF EXISTS (
+        SELECT 1
+        FROM verter
+        WHERE check_id = OLD.id
+    ) OR EXISTS (
+        SELECT 1
+        FROM p2p
+        WHERE check_id = OLD.id
+    ) THEN
+        RAISE EXCEPTION 'cannot delete record from checks with existing verter or p2p records for the same check_id';
+    END IF;
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Проверяет, что для удаляемой записи нет проверок p2p и verter
+CREATE TRIGGER trigger_check_checks_records_before_delete
+BEFORE DELETE ON checks
+FOR EACH ROW
+EXECUTE FUNCTION check_checks_records_before_delete();
+
+-- Тест: удаляется запись, для которой есть p2p
+-- Ожидается: cannot delete record from checks with existing verter or p2p records for the same check_id
+-- DELETE FROM checks WHERE id = 1;
