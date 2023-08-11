@@ -92,6 +92,32 @@ FOR EACH ROW EXECUTE FUNCTION add_start_p2p_check();
 -- Проверяет есть ли успешная проверка p2p задания
 -- перед добавлением/изменением в таблице xp
 
+CREATE OR REPLACE FUNCTION check_success_p2p()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    -- Проверка, что можно ссылаться только на успешные P2P проверки
+    IF NOT EXISTS(
+            SELECT 1
+            FROM checks
+                     JOIN p2p ON checks.id = p2p.check_id
+            WHERE checks.id = NEW.check_id
+              AND p2p.state_check = 'success'
+        ) THEN
+        RAISE EXCEPTION 'you can only refer to successful p2p checks';
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER verter_check_success_p2p_trigger
+    BEFORE INSERT OR UPDATE
+    ON verter
+    FOR EACH ROW
+EXECUTE FUNCTION check_success_p2p();
+
+
 CREATE TRIGGER xp_check_success_p2p
 BEFORE
 INSERT
