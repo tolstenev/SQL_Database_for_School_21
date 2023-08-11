@@ -1,12 +1,3 @@
--- Задачи:
--- [->] добавить тестовые инсерты на проверку ограничений и триггеров
--- [->] добавить комментарии
--- подумать о триггерах на удаление в time_tracking
--- подумать о триггерах на удаление в verter
--- подумать о триггерах на удаление в p2p
--- подумать о триггерах на удаление в checks
-
-
 -- CREATE DATABASE info_21;
 
 
@@ -328,7 +319,7 @@ $$
 
 -- Проверяет, что первая запись в p2p для соответствующей проверки должна иметь статус 'start'
 CREATE TRIGGER check_state_first_record_in_p2p
-    BEFORE INSERT
+    BEFORE INSERT OR UPDATE
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_p2p();
@@ -360,19 +351,19 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
 CREATE TRIGGER trigger_check_time_second_record_in_p2p
-    BEFORE INSERT
+    BEFORE INSERT OR UPDATE
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_p2p();
 
 -- Тест, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
--- INSERT INTO checks (id, peer, task, date_check)
--- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
--- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
 -- Ожидается ERROR: time_check for the new p2p record should be after start record
+-- INSERT INTO checks (id, peer, task, date_check)
+-- VALUES (7, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-03');
 -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (12, 6, 'tamelabe', 'failure', '2023-07-02 10:30:00.000000');
+-- VALUES (11, 7, 'tamelabe', 'start', '2023-07-03 22:30:00.000000');
+-- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- VALUES (12, 7, 'tamelabe', 'failure', '2023-07-03 10:30:00.000000');
 
 
 -- Проверяет, что verter проверяет в тот же день, что и p2p
@@ -395,7 +386,7 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет, что проверка verter'ом проходит в тот же день, что и p2p
 CREATE TRIGGER trigger_check_verter_date
-    BEFORE INSERT
+    BEFORE INSERT OR UPDATE
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_verter_date();
@@ -428,12 +419,13 @@ $$
 
 -- Проверяет, что первая запись в verter имеет статус 'start'
 CREATE TRIGGER check_state_first_record_in_verter
-    BEFORE INSERT
+    BEFORE INSERT OR UPDATE
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_verter();
 
 -- Тест, что первая запись в verter не имеет статус 'start'
+-- Ожидается ERROR: only records with state "start" are allowed when check_id does not exist in verter table
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (7, 6, 'failure', '2023-07-02 22:45:00.000000');
 
@@ -460,17 +452,15 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет, что время проверки verter'ом не раньше, чем окончание проверки p2p
 CREATE TRIGGER check_verter_time_trigger
-    BEFORE
-        INSERT
-        OR
-        UPDATE
+    BEFORE INSERT OR UPDATE
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_verter_time();
 
 -- Тест, что время проверки verter'ом не раньше, чем окончание проверки p2p
+-- Ожидается ERROR: verter checking time cannot be earlier than p2p checking time
 -- INSERT INTO verter (id, check_id, state_check, time_check)
--- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
+-- VALUES (7, 6, 'start', '2023-07-02 10:45:00.000000');
 
 
 -- Проверяет, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
@@ -494,23 +484,23 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
 CREATE TRIGGER trigger_check_time_second_record_in_verter
-    BEFORE INSERT
+    BEFORE INSERT OR UPDATE
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_verter();
 
 -- Тест, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
--- -- Если не было выполнено ранее, выполнить:
--- -- INSERT INTO checks (id, peer, task, date_check)
--- -- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
--- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- -- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
--- Тест:
+-- Ожидается ERROR: time_check for the new verter record should be after start record
+-- Если не было выполнено ранее, выполнить:
+-- INSERT INTO checks (id, peer, task, date_check)
+-- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
+-- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
+-- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
+-- -- Тест:
 -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
 -- VALUES (12, 6, 'tamelabe', 'success', '2023-07-02 22:40:00.000000');
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
--- Ожидается ERROR: time_check for the new verter record should be after start record
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (8, 6, 'failure', '2023-07-02 22:42:00.000000');
 
@@ -535,7 +525,7 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет, что рекомендуемый пир проводил проверку рекомендующего
 CREATE TRIGGER trigger_check_recommendation
-    BEFORE INSERT
+    BEFORE INSERT OR UPDATE
     ON recommendations
     FOR EACH ROW
 EXECUTE FUNCTION check_recommendation();
@@ -550,42 +540,22 @@ CREATE OR REPLACE FUNCTION check_time_tracking()
     RETURNS TRIGGER AS
 $$
 DECLARE
-    count_state_1 integer;
-    count_state_2 integer;
+    last_state integer;
 BEGIN
-    SELECT COUNT(*)
-    INTO count_state_1
+    SELECT state_track
+    INTO last_state
     FROM time_tracking
     WHERE peer_nickname = NEW.peer_nickname
       AND date_track = NEW.date_track
-      AND state_track = 1;
+    ORDER BY time_track DESC
+    LIMIT 1;
 
-    SELECT COUNT(*)
-    INTO count_state_2
-    FROM time_tracking
-    WHERE peer_nickname = NEW.peer_nickname
-      AND date_track = NEW.date_track
-      AND state_track = 2;
-
-    IF count_state_1 != count_state_2 THEN
-        RAISE EXCEPTION 'in time_tracking the number of state 1 and state 2 entries must be equal for each peer and date';
+    IF last_state = 1 AND NEW.state_track = 1 THEN
+        RAISE EXCEPTION 'state 2 entry is missing before state 1 entry in time_tracking';
     END IF;
 
-    IF count_state_1 = count_state_2 THEN
-        IF (SELECT state_track
-            FROM time_tracking
-            WHERE peer_nickname = NEW.peer_nickname
-              AND date_track = NEW.date_track
-            ORDER BY time_track DESC
-            LIMIT 1) = 1 THEN
-            IF NEW.state_track = 1 THEN
-                RAISE EXCEPTION 'state 2 entry is missing before state 1 entry in time_tracking';
-            END IF;
-        ELSE
-            IF NEW.state_track = 2 THEN
-                RAISE EXCEPTION 'state 1 entry is missing before state 2 entry in time_tracking';
-            END IF;
-        END IF;
+    IF (last_state = 2 OR last_state IS NULL) AND NEW.state_track = 2 THEN
+        RAISE EXCEPTION 'state 1 entry is missing before state 2 entry in time_tracking';
     END IF;
 
     RETURN NEW;
@@ -594,28 +564,71 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет корректность записей в time_tracking
 CREATE TRIGGER trigger_check_time_tracking
-    BEFORE INSERT
+    BEFORE INSERT OR UPDATE
     ON time_tracking
     FOR EACH ROW
 EXECUTE FUNCTION check_time_tracking();
 
--- Тест: добавление записи со статусом входа без выхода
+-- Тест: добавление записи со статусом входа без выхода (1 -> 1)
 -- Ожидается ERROR: state 2 entry is missing before state 1 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
 -- VALUES (7, 'tamelabe', '2023-07-02', '10:00:00', 1);
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
 -- VALUES (8, 'tamelabe', '2023-07-02', '11:00:00', 1);
 
--- Тест: добавление записи со статусом выхода без входа (первая запись за день)
+-- Тест: добавление записи со статусом выхода без входа (первая запись за день) (NULL -> 2)
 -- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
--- VALUES (8, 'tamelabe', '2023-07-02', '19:00:00', 2);
+-- VALUES (8, 'tamelabe', '2023-07-03', '19:00:00', 2);
 
--- Тест: добавление записи со статусом выхода без входа (не первая запись за день)
+-- Тест: добавление записи со статусом выхода без входа (не первая запись за день) (2 -> 2)
 -- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
 -- VALUES (8, 'tamelabe', '2023-07-01', '19:00:00', 2);
 
+
+-- Проверяет корректность записей в time_tracking перед удалением
+CREATE OR REPLACE FUNCTION check_time_tracking_before_delete()
+    RETURNS TRIGGER AS
+$$
+DECLARE
+    count_state_1 integer;
+    count_state_2 integer;
+BEGIN
+    SELECT COUNT(*)
+    INTO count_state_1
+    FROM time_tracking
+    WHERE peer_nickname = OLD.peer_nickname
+      AND date_track = OLD.date_track
+      AND state_track = 1;
+
+    SELECT COUNT(*)
+    INTO count_state_2
+    FROM time_tracking
+    WHERE peer_nickname = OLD.peer_nickname
+      AND date_track = OLD.date_track
+      AND state_track = 2;
+
+    IF count_state_1 != count_state_2 THEN
+        RAISE EXCEPTION 'In time_tracking, the number of state 1 and state 2 entries must be equal for each peer and date';
+    END IF;
+
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Проверяет корректность записей в time_tracking перед удалением
+CREATE TRIGGER trigger_check_time_tracking_before_delete
+    AFTER DELETE
+    ON time_tracking
+    FOR EACH ROW
+EXECUTE FUNCTION check_time_tracking_before_delete();
+
+-- -- Тест: можно удалить все записи за день (1 и 2), но нельзя удалить только одну запись
+-- -- Ожидается: тест проходит
+-- DELETE FROM time_tracking WHERE peer_nickname = 'tamelabe' AND date_track = '2023-07-01' ;
+-- -- Ожидается ERROR: In time_tracking, the number of state 1 and state 2 entries must be equal for each peer and date
+-- DELETE FROM time_tracking WHERE id = 3;
 
 -- Проверяет на завершение родительского таска для добавляемой записи проверки в таблицу check
 CREATE OR REPLACE FUNCTION check_parent_task_in_xp() RETURNS trigger AS
@@ -816,17 +829,18 @@ EXECUTE FUNCTION check_p2p_records_before_delete();
 
 -- Проверяет, что для удаляемой записи нет проверок p2p и verter
 CREATE OR REPLACE FUNCTION check_checks_records_before_delete()
-RETURNS TRIGGER AS $$
+    RETURNS TRIGGER AS
+$$
 BEGIN
-    IF EXISTS (
-        SELECT 1
-        FROM verter
-        WHERE check_id = OLD.id
-    ) OR EXISTS (
-        SELECT 1
-        FROM p2p
-        WHERE check_id = OLD.id
-    ) THEN
+    IF EXISTS(
+               SELECT 1
+               FROM verter
+               WHERE check_id = OLD.id
+           ) OR EXISTS(
+               SELECT 1
+               FROM p2p
+               WHERE check_id = OLD.id
+           ) THEN
         RAISE EXCEPTION 'cannot delete record from checks with existing verter or p2p records for the same check_id';
     END IF;
     RETURN OLD;
@@ -835,8 +849,9 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет, что для удаляемой записи нет проверок p2p и verter
 CREATE TRIGGER trigger_check_checks_records_before_delete
-BEFORE DELETE ON checks
-FOR EACH ROW
+    BEFORE DELETE
+    ON checks
+    FOR EACH ROW
 EXECUTE FUNCTION check_checks_records_before_delete();
 
 -- Тест: удаляется запись, для которой есть p2p
