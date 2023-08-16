@@ -1,0 +1,7 @@
+title,parent_task,max_xp
+Pool,,150
+C2_Simple_Bash_Utils,Pool,250
+C3_s21_stringplus,C2_Simple_Bash_Utils,500
+C5_s21_decimal,C3_s21_stringplus,350
+DO1_Linux,C3_s21_stringplus,300
+C6_s21_matrix,C5_s21_decimal,200
