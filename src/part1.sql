@@ -3,7 +3,21 @@
 
 CREATE SCHEMA IF NOT EXISTS public;
 
+-- ------------------------------------ Чистка ------------------------------------ --
+-- Перечисление
+DROP TYPE IF EXISTS state_of_check;
 
+-- Последовательности
+DROP SEQUENCE IF EXISTS checks_id_seq;
+DROP SEQUENCE IF EXISTS p2p_id_seq;
+DROP SEQUENCE IF EXISTS verter_id_seq;
+DROP SEQUENCE IF EXISTS transferred_points_id_seq;
+DROP SEQUENCE IF EXISTS friends_id_seq;
+DROP SEQUENCE IF EXISTS recommendations_id_seq;
+DROP SEQUENCE IF EXISTS xp_id_seq;
+DROP SEQUENCE IF EXISTS time_tracking_id_seq;
+
+-- Таблицы
 DROP TABLE IF EXISTS peers,
     tasks,
     p2p,
@@ -15,8 +29,66 @@ DROP TABLE IF EXISTS peers,
     xp,
     time_tracking CASCADE;
 
+-- Удаление триггерных функций для таблиц на insert
+DROP FUNCTION IF EXISTS trigger_checks_insert() CASCADE;
+DROP FUNCTION IF EXISTS trigger_p2p_insert() CASCADE;
+DROP FUNCTION IF EXISTS trigger_verter_insert() CASCADE;
+DROP FUNCTION IF EXISTS trigger_transferred_points_insert() CASCADE;
+DROP FUNCTION IF EXISTS trigger_friends_insert() CASCADE;
+DROP FUNCTION IF EXISTS trigger_recommendations_insert() CASCADE;
+DROP FUNCTION IF EXISTS trigger_xp_insert() CASCADE;
+DROP FUNCTION IF EXISTS trigger_time_tracking_insert() CASCADE;
 
-DROP TYPE IF EXISTS state_of_check;
+-- Удаление триггеров для таблиц на insert
+DROP TRIGGER IF EXISTS trigger_checks_insert ON checks;
+DROP TRIGGER IF EXISTS trigger_p2p_insert ON p2p;
+DROP TRIGGER IF EXISTS trigger_verter_insert ON verter;
+DROP TRIGGER IF EXISTS trigger_transferred_points_insert ON transferred_points;
+DROP TRIGGER IF EXISTS trigger_friends_insert ON friends;
+DROP TRIGGER IF EXISTS trigger_recommendations_insert ON recommendations;
+DROP TRIGGER IF EXISTS trigger_xp_insert ON xp;
+DROP TRIGGER IF EXISTS trigger_time_tracking_insert ON time_tracking;
+
+-- Удаление триггера
+DROP TRIGGER IF EXISTS trigger_check_parent_task ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_parent_task_before_delete ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_date_p2p ON tasks;
+DROP TRIGGER IF EXISTS check_state_first_record_in_p2p ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_time_second_record_in_p2p ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_verter_date ON tasks;
+DROP TRIGGER IF EXISTS check_state_first_record_in_verter ON tasks;
+DROP TRIGGER IF EXISTS check_verter_time_trigger ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_time_second_record_in_verter ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_recommendation ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_time_tracking ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_time_tracking_before_delete ON tasks;
+DROP TRIGGER IF EXISTS check_xp_completed_trigger ON tasks;
+DROP TRIGGER IF EXISTS p2p_check_two_records_trigger ON tasks;
+DROP TRIGGER IF EXISTS verter_check_two_records_trigger ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_verter_records_before_delete ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_p2p_records_before_delete ON tasks;
+DROP TRIGGER IF EXISTS trigger_check_checks_records_before_delete ON tasks;
+-- Удаление функции
+DROP FUNCTION IF EXISTS check_parent_task();
+DROP FUNCTION IF EXISTS check_parent_task_before_delete();
+DROP FUNCTION IF EXISTS check_date_p2p();
+DROP FUNCTION IF EXISTS check_state_first_record_in_p2p();
+DROP FUNCTION IF EXISTS check_time_second_record_in_p2p();
+DROP FUNCTION IF EXISTS check_verter_date();
+DROP FUNCTION IF EXISTS check_state_first_record_in_verter();
+DROP FUNCTION IF EXISTS check_verter_time();
+DROP FUNCTION IF EXISTS check_time_second_record_in_verter();
+DROP FUNCTION IF EXISTS check_recommendation();
+DROP FUNCTION IF EXISTS check_time_tracking();
+DROP FUNCTION IF EXISTS check_time_tracking_before_delete();
+DROP FUNCTION IF EXISTS check_parent_task_in_xp();
+DROP FUNCTION IF EXISTS p2p_check_two_records();
+DROP FUNCTION IF EXISTS verter_check_two_records();
+DROP FUNCTION IF EXISTS check_verter_records_before_delete();
+DROP FUNCTION IF EXISTS check_p2p_records_before_delete();
+DROP FUNCTION IF EXISTS check_checks_records_before_delete();
+
+-- ------------------------------------ Перечисления ------------------------------------ --
 
 -- Создание типа перечисления для статуса проверки
 CREATE TYPE state_of_check AS ENUM ('start', 'success', 'failure');
@@ -146,7 +218,8 @@ CREATE TABLE xp
     check_id  int not null,
     xp_amount int not null,
     CONSTRAINT ch_xp_amount_range CHECK (xp_amount >= 0),
-    CONSTRAINT fk_xp_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
+    CONSTRAINT fk_xp_check_id FOREIGN KEY (check_id) REFERENCES checks (id),
+    CONSTRAINT unique_xp UNIQUE (check_id)
 );
 
 -- Создание таблицы time_tracking
@@ -162,7 +235,7 @@ CREATE TABLE time_tracking
     CONSTRAINT ch_date_track CHECK (date_track <= CURRENT_DATE)
 );
 
--- ------------------------------------ Триггерные фунеции к последовательности ------------------------------------ --
+-- ------------------------------------ Триггерные функции к последовательности ------------------------------------ --
 
 -- Триггерная функция для таблицы checks на insert
 CREATE OR REPLACE FUNCTION trigger_checks_insert()
@@ -180,9 +253,6 @@ CREATE TRIGGER trigger_checks_insert
     BEFORE INSERT ON checks
     FOR EACH ROW
     EXECUTE FUNCTION trigger_checks_insert();
-
--- Аналогично создайте триггерные функции и триггеры для остальных таблиц
--- ...
 
 -- Триггерная функция для таблицы p2p на insert
 CREATE OR REPLACE FUNCTION trigger_p2p_insert()
@@ -218,9 +288,6 @@ CREATE TRIGGER trigger_verter_insert
     FOR EACH ROW
     EXECUTE FUNCTION trigger_verter_insert();
 
--- Аналогично создайте триггерные функции и триггеры для остальных таблиц
--- ...
-
 -- Триггерная функция для таблицы transferred_points на insert
 CREATE OR REPLACE FUNCTION trigger_transferred_points_insert()
     RETURNS TRIGGER AS
@@ -254,9 +321,6 @@ CREATE TRIGGER trigger_friends_insert
     BEFORE INSERT ON friends
     FOR EACH ROW
     EXECUTE FUNCTION trigger_friends_insert();
-
--- Аналогично создайте триггерные функции и триггеры для остальных таблиц
--- ...
 
 -- Триггерная функция для таблицы recommendations на insert
 CREATE OR REPLACE FUNCTION trigger_recommendations_insert()
@@ -333,44 +397,17 @@ BEGIN
 END;
 $$;
 
--- Импорт данных из CSV файла
--- SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
--- SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
--- SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
--- SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
--- SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
--- SELECT ImportTableFromCSV('transferred_points', ',',
---                           '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
--- SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
--- SELECT ImportTableFromCSV('recommendations', ',',
---                           '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
--- SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
--- SELECT ImportTableFromCSV('time_tracking', ',',
---                           '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
-
--- -- Экспорт данных в CSV файл
--- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
--- SELECT ExportTableToCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
--- SELECT ExportTableToCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
--- SELECT ExportTableToCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
--- SELECT ExportTableToCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
--- SELECT ExportTableToCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
--- SELECT ExportTableToCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
--- SELECT ExportTableToCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
--- SELECT ExportTableToCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
--- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
-
 -- -- Импорт данных из CSV файла
 SELECT ImportTableFromCSV('peers', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/peers.csv');
 SELECT ImportTableFromCSV('tasks', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/tasks.csv');
 SELECT ImportTableFromCSV('checks', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/checks.csv');
--- SELECT ImportTableFromCSV('p2p', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/p2p.csv');
--- SELECT ImportTableFromCSV('verter', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/verter.csv');
--- SELECT ImportTableFromCSV('transferred_points', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/transferred_points.csv');
--- SELECT ImportTableFromCSV('friends', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/friends.csv');
--- SELECT ImportTableFromCSV('recommendations', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/recommendations.csv');
--- SELECT ImportTableFromCSV('xp', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/xp.csv');
--- SELECT ImportTableFromCSV('time_tracking', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/time_tracking.csv');
+SELECT ImportTableFromCSV('p2p', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/p2p.csv');
+SELECT ImportTableFromCSV('verter', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/verter.csv');
+SELECT ImportTableFromCSV('transferred_points', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/transferred_points.csv');
+SELECT ImportTableFromCSV('friends', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/friends.csv');
+SELECT ImportTableFromCSV('recommendations', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/recommendations.csv');
+SELECT ImportTableFromCSV('xp', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/xp.csv');
+SELECT ImportTableFromCSV('time_tracking', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/time_tracking.csv');
 
 -- -- Экспорт данных в CSV файл
 -- SELECT ExportTableToCSV('peers', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/peers.csv');
@@ -631,6 +668,7 @@ CREATE TRIGGER check_verter_time_trigger
     FOR EACH ROW
 EXECUTE FUNCTION check_verter_time();
 
+
 -- Тест, что время проверки verter'ом не раньше, чем окончание проверки p2p
 -- Ожидается ERROR: verter checking time cannot be earlier than p2p checking time
 -- INSERT INTO verter (id, check_id, state_check, time_check)
@@ -743,6 +781,7 @@ CREATE TRIGGER trigger_check_time_tracking
     FOR EACH ROW
 EXECUTE FUNCTION check_time_tracking();
 
+
 -- Тест: добавление записи со статусом входа без выхода (1 -> 1)
 -- Ожидается ERROR: state 2 entry is missing before state 1 entry in time_tracking
 -- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
@@ -797,6 +836,8 @@ CREATE TRIGGER trigger_check_time_tracking_before_delete
     ON time_tracking
     FOR EACH ROW
 EXECUTE FUNCTION check_time_tracking_before_delete();
+
+
 
 -- -- Тест: можно удалить все записи за день (1 и 2), но нельзя удалить только одну запись
 -- -- Ожидается: тест проходит
@@ -905,6 +946,8 @@ CREATE TRIGGER verter_check_two_records_trigger
     FOR EACH ROW
 EXECUTE FUNCTION verter_check_two_records();
 
+
+
 -- Тест: попытка добавить третью запись для проверки в таблицу verter
 -- -- Если не было выполнено ранее, выполнить:
 -- -- INSERT INTO checks (id, peer, task, date_check)
@@ -992,6 +1035,8 @@ CREATE TRIGGER trigger_check_p2p_records_before_delete
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_p2p_records_before_delete();
+
+
 
 -- Тест: удаляемая запись содержит записи в verter
 -- Ожидается: cannot delete record from p2p with existing verter records for the same check_id
