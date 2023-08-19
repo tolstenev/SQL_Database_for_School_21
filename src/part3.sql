@@ -14,10 +14,10 @@ BEGIN
         SELECT p1.nickname, p2.nickname,
             CASE
                 WHEN (
-                    SELECT COUNT(tp2.points_amount) FROM transferred_points tp2
+                    SELECT SUM(tp2.points_amount) FROM transferred_points tp2
                     WHERE tp2.checked_peer = p1.nickname AND tp2.checking_peer = p2.nickname
-                ) > COUNT(points_amount) THEN -(COUNT(points_amount))
-                ELSE COUNT(points_amount)
+                ) > COUNT(points_amount) THEN -(SUM(points_amount))
+                ELSE SUM(points_amount)
             END
         FROM transferred_points tp1
         JOIN peers p1 ON tp1.checking_peer = p1.nickname
@@ -83,34 +83,37 @@ SELECT *
 FROM get_peers_insid_campus('2023-07-01');
 
 
+-- -------------------------------------------------------------------------------------- --
+-- 4) Посчитать изменение в количестве пир поинтов каждого пира по таблице TransferredPoints
+-- Результат вывести отсортированным по изменению числа поинтов. 
+-- Формат вывода: ник пира, изменение в количество пир поинтов
+-- -------------------------------------------------------------------------------------- --
 
 
--- -- TASK 4
+DROP FUNCTION IF EXISTS calculate_change_peer_points();
 
--- -- Для реализации данной задачи, вам понадобится таблица TransferredPoints, содержащая информацию о переданных пир поинтах между пирами. Предполагается, что в таблице есть записи о передаче пир поинтов для каждого пира.
+CREATE OR REPLACE FUNCTION calculate_change_peer_points()
+RETURNS TABLE ("Peer" VARCHAR(16), "PointsChange" BIGINT)
+LANGUAGE PLPGSQL AS $$
+BEGIN
+    RETURN QUERY EXECUTE '
+        SELECT u1.cp, CAST(SUM(u1.pa) AS BIGINT) 
+        FROM (
+          (SELECT tp1.checking_peer AS cp, -SUM(points_amount) AS pa
+          FROM transferred_points tp1
+          GROUP BY 1)
+          UNION
+          (SELECT tp2.checked_peer AS cp, SUM(points_amount) AS pa
+          FROM transferred_points tp2
+          GROUP BY 1)
+        ) AS u1
+        GROUP BY u1.cp';
+END;
+$$;
 
--- -- Ниже представлен SQL-запрос, который позволяет посчитать изменение в количестве пир поинтов для каждого пира и вывести результат отсортированным по изменению числа поинтов.
+SELECT *
+FROM calculate_change_peer_points();
 
--- SELECT
---   p.peer_name AS 'Ник пира',
---   SUM(tp.points) AS 'Изменение в количестве пир поинтов'
--- FROM
---   TransferredPoints tp
--- JOIN
---   Peers p ON tp.peer_id = p.peer_id
--- GROUP BY
---   p.peer_name
--- ORDER BY
---   SUM(tp.points) DESC;
-
--- -- Этот запрос выполняет следующие действия:
-
--- -- Выбирает ник пира (peer_name) из таблицы Peers и называет его столбцом "Ник пира".
--- -- Суммирует количество переданных пир поинтов (points) из таблицы TransferredPoints и называет его столбцом "Изменение в количестве пир поинтов".
--- -- Объединяет таблицы TransferredPoints и Peers по идентификатору пира (tp.peer_id = p.peer_id).
--- -- Группирует результаты по нику пира (p.peer_name).
--- -- Сортирует результаты по сумме пир поинтов в порядке убывания (SUM(tp.points) DESC).
--- -- Вы можете выполнить этот запрос, чтобы получить результат в формате "ник пира, изменение в количество пир поинтов", отсортированный по изменению числа поинтов.
 
 -- -- TASK 5
 
