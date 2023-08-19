@@ -21,6 +21,32 @@ DROP TYPE IF EXISTS state_of_check;
 -- Создание типа перечисления для статуса проверки
 CREATE TYPE state_of_check AS ENUM ('start', 'success', 'failure');
 
+-- ------------------------------------ Последовательности ------------------------------------ --
+
+-- Создание последовательности для таблицы checks
+CREATE SEQUENCE checks_id_seq START WITH 1 INCREMENT BY 1;
+
+-- Создание последовательности для таблицы p2p
+CREATE SEQUENCE p2p_id_seq START WITH 1 INCREMENT BY 1;
+
+-- Создание последовательности для таблицы verter
+CREATE SEQUENCE verter_id_seq START WITH 1 INCREMENT BY 1;
+
+-- Создание последовательности для таблицы transferred_points
+CREATE SEQUENCE transferred_points_id_seq START WITH 1 INCREMENT BY 1;
+
+-- Создание последовательности для таблицы friends
+CREATE SEQUENCE friends_id_seq START WITH 1 INCREMENT BY 1;
+
+-- Создание последовательности для таблицы recommendations
+CREATE SEQUENCE recommendations_id_seq START WITH 1 INCREMENT BY 1;
+
+-- Создание последовательности для таблицы xp
+CREATE SEQUENCE xp_id_seq START WITH 1 INCREMENT BY 1;
+
+-- Создание последовательности для таблицы time_tracking
+CREATE SEQUENCE time_tracking_id_seq START WITH 1 INCREMENT BY 1;
+
 -- ------------------------------------ СОЗДАНИЕ ТАБЛИЦ ------------------------------------ --
 
 -- Создание таблицы peers
@@ -136,6 +162,154 @@ CREATE TABLE time_tracking
     CONSTRAINT ch_date_track CHECK (date_track <= CURRENT_DATE)
 );
 
+-- ------------------------------------ Триггерные фунеции к последовательности ------------------------------------ --
+
+-- Триггерная функция для таблицы checks на insert
+CREATE OR REPLACE FUNCTION trigger_checks_insert()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.id := nextval('checks_id_seq');
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Триггер для таблицы checks на insert
+CREATE TRIGGER trigger_checks_insert
+    BEFORE INSERT ON checks
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_checks_insert();
+
+-- Аналогично создайте триггерные функции и триггеры для остальных таблиц
+-- ...
+
+-- Триггерная функция для таблицы p2p на insert
+CREATE OR REPLACE FUNCTION trigger_p2p_insert()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.id := nextval('p2p_id_seq');
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Триггер для таблицы p2p на insert
+CREATE TRIGGER trigger_p2p_insert
+    BEFORE INSERT ON p2p
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_p2p_insert();
+
+-- Триггерная функция для таблицы verter на insert
+CREATE OR REPLACE FUNCTION trigger_verter_insert()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.id := nextval('verter_id_seq');
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Триггер для таблицы verter на insert
+CREATE TRIGGER trigger_verter_insert
+    BEFORE INSERT ON verter
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_verter_insert();
+
+-- Аналогично создайте триггерные функции и триггеры для остальных таблиц
+-- ...
+
+-- Триггерная функция для таблицы transferred_points на insert
+CREATE OR REPLACE FUNCTION trigger_transferred_points_insert()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.id := nextval('transferred_points_id_seq');
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Триггер для таблицы transferred_points на insert
+CREATE TRIGGER trigger_transferred_points_insert
+    BEFORE INSERT ON transferred_points
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_transferred_points_insert();
+
+-- Триггерная функция для таблицы friends на insert
+CREATE OR REPLACE FUNCTION trigger_friends_insert()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.id := nextval('friends_id_seq');
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Триггер для таблицы friends на insert
+CREATE TRIGGER trigger_friends_insert
+    BEFORE INSERT ON friends
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_friends_insert();
+
+-- Аналогично создайте триггерные функции и триггеры для остальных таблиц
+-- ...
+
+-- Триггерная функция для таблицы recommendations на insert
+CREATE OR REPLACE FUNCTION trigger_recommendations_insert()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.id := nextval('recommendations_id_seq');
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Триггер для таблицы recommendations на insert
+CREATE TRIGGER trigger_recommendations_insert
+    BEFORE INSERT ON recommendations
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_recommendations_insert();
+
+-- Триггерная функция для таблицы xp на insert
+CREATE OR REPLACE FUNCTION trigger_xp_insert()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.id := nextval('xp_id_seq');
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Триггер для таблицы xp на insert
+CREATE TRIGGER trigger_xp_insert
+    BEFORE INSERT ON xp
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_xp_insert();
+
+-- Триггерная функция для таблицы time_tracking на insert
+CREATE OR REPLACE FUNCTION trigger_time_tracking_insert()
+    RETURNS TRIGGER AS
+$$
+BEGIN
+    NEW.id := nextval('time_tracking_id_seq');
+    RETURN NEW;
+END;
+$$
+LANGUAGE plpgsql;
+
+-- Триггер для таблицы time_tracking на insert
+CREATE TRIGGER trigger_time_tracking_insert
+    BEFORE INSERT ON time_tracking
+    FOR EACH ROW
+    EXECUTE FUNCTION trigger_time_tracking_insert();
+
+
 
 -- ------------------------------------ ФУНКЦИИ ИМПОРТА И ЭКСПОРТА ------------------------------------ --
 
@@ -160,19 +334,19 @@ END;
 $$;
 
 -- Импорт данных из CSV файла
-SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
-SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
-SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
-SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
-SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
-SELECT ImportTableFromCSV('transferred_points', ',',
-                          '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
-SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
-SELECT ImportTableFromCSV('recommendations', ',',
-                          '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
-SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
-SELECT ImportTableFromCSV('time_tracking', ',',
-                          '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
+-- SELECT ImportTableFromCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
+-- SELECT ImportTableFromCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/tasks.csv');
+-- SELECT ImportTableFromCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/checks.csv');
+-- SELECT ImportTableFromCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/p2p.csv');
+-- SELECT ImportTableFromCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/verter.csv');
+-- SELECT ImportTableFromCSV('transferred_points', ',',
+--                           '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/transferred_points.csv');
+-- SELECT ImportTableFromCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/friends.csv');
+-- SELECT ImportTableFromCSV('recommendations', ',',
+--                           '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/recommendations.csv');
+-- SELECT ImportTableFromCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/xp.csv');
+-- SELECT ImportTableFromCSV('time_tracking', ',',
+--                           '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
 -- -- Экспорт данных в CSV файл
 -- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/peers.csv');
@@ -187,28 +361,28 @@ SELECT ImportTableFromCSV('time_tracking', ',',
 -- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2/src/data/time_tracking.csv');
 
 -- -- Импорт данных из CSV файла
--- SELECT ImportTableFromCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
--- SELECT ImportTableFromCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
--- SELECT ImportTableFromCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
--- SELECT ImportTableFromCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
--- SELECT ImportTableFromCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
--- SELECT ImportTableFromCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
--- SELECT ImportTableFromCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
--- SELECT ImportTableFromCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
--- SELECT ImportTableFromCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
--- SELECT ImportTableFromCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
+SELECT ImportTableFromCSV('peers', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/peers.csv');
+SELECT ImportTableFromCSV('tasks', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/tasks.csv');
+SELECT ImportTableFromCSV('checks', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/checks.csv');
+-- SELECT ImportTableFromCSV('p2p', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/p2p.csv');
+-- SELECT ImportTableFromCSV('verter', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/verter.csv');
+-- SELECT ImportTableFromCSV('transferred_points', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/transferred_points.csv');
+-- SELECT ImportTableFromCSV('friends', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/friends.csv');
+-- SELECT ImportTableFromCSV('recommendations', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/recommendations.csv');
+-- SELECT ImportTableFromCSV('xp', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/xp.csv');
+-- SELECT ImportTableFromCSV('time_tracking', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/time_tracking.csv');
 
 -- -- Экспорт данных в CSV файл
--- SELECT ExportTableToCSV('peers', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/peers.csv');
--- SELECT ExportTableToCSV('tasks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/tasks.csv');
--- SELECT ExportTableToCSV('checks', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/checks.csv');
--- SELECT ExportTableToCSV('p2p', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/p2p.csv');
--- SELECT ExportTableToCSV('verter', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/verter.csv');
--- SELECT ExportTableToCSV('transferred_points', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/transferred_points.csv');
--- SELECT ExportTableToCSV('friends', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/friends.csv');
--- SELECT ExportTableToCSV('recommendations', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/recommendations.csv');
--- SELECT ExportTableToCSV('xp', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/xp.csv');
--- SELECT ExportTableToCSV('time_tracking', ',', '/Users/nyarlath/Desktop/SQL2_Info21_v1.0-2/src/data/time_tracking.csv');
+-- SELECT ExportTableToCSV('peers', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/peers.csv');
+-- SELECT ExportTableToCSV('tasks', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/tasks.csv');
+-- SELECT ExportTableToCSV('checks', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/checks.csv');
+-- SELECT ExportTableToCSV('p2p', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/p2p.csv');
+-- SELECT ExportTableToCSV('verter', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/verter.csv');
+-- SELECT ExportTableToCSV('transferred_points', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/transferred_points.csv');
+-- SELECT ExportTableToCSV('friends', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/friends.csv');
+-- SELECT ExportTableToCSV('recommendations', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/recommendations.csv');
+-- SELECT ExportTableToCSV('xp', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/xp.csv');
+-- SELECT ExportTableToCSV('time_tracking', ',', '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/time_tracking.csv');
 
 -- ------------------------------------ ТРИГГЕРЫ ------------------------------------ --
 
