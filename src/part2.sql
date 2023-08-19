@@ -246,6 +246,11 @@ VALUES (6, 150);
 SELECT add_p2p_check('nyarlath', 'pollare', 'C2_Simple_Bash_Utils', 'start', '2023-08-02');
 SELECT add_p2p_check('nyarlath', 'pollare', 'C2_Simple_Bash_Utils', 'success', '2023-08-02  11:00:00');
 SELECT add_verter_check('nyarlath', 'C2_Simple_Bash_Utils', 'start', '2023-08-02 12:00:00');
+
+-- Fail verter
+INSERT INTO xp (check_id, xp_amount)
+VALUES (7, 250);
+
 SELECT add_verter_check('nyarlath', 'C2_Simple_Bash_Utils', 'success', '2023-08-02 12:00:01');
 
 -- Fail max xp
