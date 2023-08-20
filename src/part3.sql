@@ -152,6 +152,37 @@ $$;
 SELECT *
 FROM calculate_change_peer_points_task5();
 
+
+-- -------------------------------------------------------------------------------------- --
+-- 6) Определить самое часто проверяемое задание за каждый день
+-- При одинаковом количестве проверок каких-то заданий в определенный день, вывести их все. 
+-- Формат вывода: день, название задания
+-- -------------------------------------------------------------------------------------- --
+
+DROP FUNCTION IF EXISTS find_most_checked_task_for_each_day();
+
+CREATE OR REPLACE FUNCTION find_most_checked_task_for_each_day()
+    RETURNS TABLE (
+        "Day" DATE,
+        "Task" VARCHAR(255)
+    )
+LANGUAGE PLPGSQL AS $$
+BEGIN
+    RETURN QUERY EXECUTE '
+        SELECT date_check, task
+        FROM (
+            SELECT task, date_check, 
+            RANK() OVER (PARTITION BY date_check ORDER BY COUNT(*) DESC) AS rnk 
+            FROM checks
+            GROUP BY date_check, task
+        ) AS subquery
+        WHERE rnk = 1;';
+END;
+$$;
+
+SELECT *
+FROM find_most_checked_task_for_each_day();
+
 -- -- TASK 6
 
 -- -- Для определения самого часто проверяемого задания за каждый день, вам потребуется использовать таблицу Checks, содержащую информацию о проверках заданий, а также столбцы check_date и task_name для определения дня и названия задания соответственно.
