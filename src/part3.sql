@@ -129,45 +129,28 @@ CREATE OR REPLACE FUNCTION calculate_change_peer_points_task5()
 LANGUAGE PLPGSQL AS $$
 BEGIN
     RETURN QUERY EXECUTE '
-SELECT *
-        FROM get_transferred_points_readable()';
+        SELECT t3.Peer, SUM(t3.PointsAmount) FROM (
+            (SELECT t1."Peer1" AS Peer, CASE
+                WHEN SUM(t1."PointsAmount") < 0 THEN SUM(t1."PointsAmount")
+                ELSE -SUM(t1."PointsAmount")
+            END AS PointsAmount
+            FROM get_transferred_points_readable() AS t1
+            GROUP BY t1."Peer1")
+            UNION
+            (SELECT t2."Peer2", CASE
+                WHEN SUM(t2."PointsAmount") > 0 THEN SUM(t2."PointsAmount")
+                ELSE -SUM(t2."PointsAmount")
+            END AS PointsAmount
+            FROM get_transferred_points_readable() AS t2
+            GROUP BY t2."Peer2")
+            ) AS t3
+        GROUP BY t3.Peer
+        ORDER BY 2 DESC';
 END;
 $$;
 
 SELECT *
 FROM calculate_change_peer_points_task5();
-
--- -- TASK 5
-
--- -- Для реализации данной задачи, вам потребуется использовать функцию GetPeersInsideCampus из предыдущего ответа. Эта функция возвращает список пиров, которые не выходили из кампуса в указанный день.
-
--- -- Ниже представлен SQL-запрос, который позволяет посчитать изменение в количестве пир поинтов для каждого пира из результата функции GetPeersInsideCampus и вывести результат отсортированным по изменению числа поинтов.
-
--- SELECT
---   p.peer_name AS 'Ник пира',
---   SUM(tp.points) AS 'Изменение в количестве пир поинтов'
--- FROM
---   TransferredPoints tp
--- JOIN
---   Peers p ON tp.peer_id = p.peer_id
--- WHERE
---   p.peer_name IN (
---     SELECT peer_name
---     FROM GetPeersInsideCampus('дд.мм.гггг')
---   )
--- GROUP BY
---   p.peer_name
--- ORDER BY
---   SUM(tp.points) DESC;
--- -- В этом запросе:
-
--- -- Выбирается ник пира (peer_name) из таблицы Peers и называется столбцом "Ник пира".
--- -- Суммируется количество переданных пир поинтов (points) из таблицы TransferredPoints и называется столбцом "Изменение в количестве пир поинтов".
--- -- Объединяются таблицы TransferredPoints и Peers по идентификатору пира (tp.peer_id = p.peer_id).
--- -- Применяется фильтр, чтобы выбрать только пиров, которые находятся в списке пиров, возвращаемом функцией GetPeersInsideCampus.
--- -- Группируются результаты по нику пира (p.peer_name).
--- -- Сортируются результаты по сумме пир поинтов в порядке убывания (SUM(tp.points) DESC).
--- -- Вы должны заменить 'дд.мм.гггг' в запросе на конкретную дату в формате 'дд.мм.гггг', чтобы получить результат для указанной даты. Результат будет в формате "ник пира, изменение в количество пир поинтов", отсортированный по изменению числа поинтов.
 
 -- -- TASK 6
 
