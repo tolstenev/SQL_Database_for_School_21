@@ -4,24 +4,20 @@
 -- Количество отрицательное, если пир 2 получил от пира 1 больше поинтов.
 -- -----------------------------------------------------------
 
-DROP FUNCTION IF EXISTS get_transferred_points_readable();
-
 CREATE OR REPLACE FUNCTION get_transferred_points_readable()
 RETURNS TABLE ("Peer1" VARCHAR(16), "Peer2" VARCHAR(16), "PointsAmount" BIGINT)
 LANGUAGE PLPGSQL AS $$
 BEGIN
     RETURN QUERY EXECUTE '
-        SELECT p1.nickname, p2.nickname,
+        SELECT tp1.checking_peer, tp1.checked_peer,
             CASE
                 WHEN (
                     SELECT SUM(tp2.points_amount) FROM transferred_points tp2
-                    WHERE tp2.checked_peer = p1.nickname AND tp2.checking_peer = p2.nickname
+                    WHERE tp2.checked_peer = tp1.checking_peer AND tp2.checking_peer = tp1.checked_peer
                 ) > COUNT(points_amount) THEN -(SUM(points_amount))
                 ELSE SUM(points_amount)
             END
         FROM transferred_points tp1
-        JOIN peers p1 ON tp1.checking_peer = p1.nickname
-        JOIN peers p2 ON tp1.checked_peer = p2.nickname
         GROUP BY 1, 2';
 END;
 $$;
@@ -107,13 +103,39 @@ BEGIN
           FROM transferred_points tp2
           GROUP BY 1)
         ) AS u1
-        GROUP BY u1.cp';
+        GROUP BY u1.cp
+        ORDER BY 2 DESC';
 END;
 $$;
 
 SELECT *
 FROM calculate_change_peer_points();
 
+
+-- -------------------------------------------------------------------------------------- --
+-- 5) Посчитать изменение в количестве пир поинтов каждого пира по таблице, возвращаемой первой функцией из Part 3
+-- Результат вывести отсортированным по изменению числа поинтов. 
+-- Формат вывода: ник пира, изменение в количество пир поинтов
+-- -------------------------------------------------------------------------------------- --
+
+DROP FUNCTION IF EXISTS calculate_change_peer_points_task5();
+
+CREATE OR REPLACE FUNCTION calculate_change_peer_points_task5()
+    RETURNS TABLE
+            (
+                "Peer"         VARCHAR(16),
+                "PointsChange" BIGINT
+            )
+LANGUAGE PLPGSQL AS $$
+BEGIN
+    RETURN QUERY EXECUTE '
+SELECT *
+        FROM get_transferred_points_readable()';
+END;
+$$;
+
+SELECT *
+FROM calculate_change_peer_points_task5();
 
 -- -- TASK 5
 
