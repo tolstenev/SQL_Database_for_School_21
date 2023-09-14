@@ -5,8 +5,15 @@
 -- -----------------------------------------------------------
 
 CREATE OR REPLACE FUNCTION get_transferred_points_readable()
-RETURNS TABLE ("Peer1" VARCHAR(16), "Peer2" VARCHAR(16), "PointsAmount" BIGINT)
-LANGUAGE PLPGSQL AS $$
+    RETURNS TABLE
+            (
+                "Peer1"        varchar(16),
+                "Peer2"        varchar(16),
+                "PointsAmount" bigint
+            )
+    LANGUAGE plpgsql
+AS
+$$
 BEGIN
     RETURN QUERY EXECUTE '
         SELECT tp1.checking_peer, tp1.checked_peer,
@@ -22,6 +29,7 @@ BEGIN
 END;
 $$;
 
+-- todo: добавить данные, чтобы были записи с отрицательными и нулевыми значениями
 SELECT *
 FROM get_transferred_points_readable();
 
@@ -34,8 +42,15 @@ FROM get_transferred_points_readable();
 DROP FUNCTION IF EXISTS get_user_xp();
 
 CREATE OR REPLACE FUNCTION get_user_xp()
-RETURNS TABLE ("Peer" VARCHAR(16), "Task" VARCHAR(32), "XP" BIGINT)
-LANGUAGE PLPGSQL AS $$
+    RETURNS TABLE
+            (
+                "Peer" varchar(16),
+                "Task" varchar(32),
+                "XP"   int
+            )
+    LANGUAGE plpgsql
+AS
+$$
 BEGIN
     RETURN QUERY EXECUTE '
         SELECT ch.peer, ch.task, xp.xp_amount
@@ -50,7 +65,8 @@ $$;
 SELECT *
 FROM get_user_xp();
 
--- Без доставерных данных. Не включает все успешные проверки. Не исключает fail
+-- todo: что это за комментарий?
+-- Без достоверных данных. Не включает все успешные проверки. Не исключает fail
 -- SELECT c.peer, c.task, x.xp_amount FROM xp x
 -- JOIN checks c ON x.check_id = c.id'
 
@@ -60,11 +76,16 @@ FROM get_user_xp();
 -- Функция возвращает только список пиров.
 -- -------------------------------------------------------------------------------------- --
 
-DROP FUNCTION IF EXISTS get_peers_insid_campus();
+DROP FUNCTION IF EXISTS get_peers_inside_campus();
 
-CREATE OR REPLACE FUNCTION get_peers_insid_campus(date_track date)
-RETURNS TABLE ("Peer" VARCHAR(16))
-LANGUAGE PLPGSQL AS $$
+CREATE OR REPLACE FUNCTION get_peers_inside_campus(date_track date)
+    RETURNS TABLE
+            (
+                "Peer" varchar(16)
+            )
+    LANGUAGE plpgsql
+AS
+$$
 BEGIN
     RETURN QUERY EXECUTE '
         SELECT peer_nickname
@@ -76,7 +97,7 @@ END;
 $$;
 
 SELECT *
-FROM get_peers_insid_campus('2023-07-01');
+FROM get_peers_inside_campus('2023-07-01');
 
 
 -- -------------------------------------------------------------------------------------- --
@@ -89,11 +110,17 @@ FROM get_peers_insid_campus('2023-07-01');
 DROP FUNCTION IF EXISTS calculate_change_peer_points();
 
 CREATE OR REPLACE FUNCTION calculate_change_peer_points()
-RETURNS TABLE ("Peer" VARCHAR(16), "PointsChange" BIGINT)
-LANGUAGE PLPGSQL AS $$
+    RETURNS TABLE
+            (
+                "Peer"         varchar(16),
+                "PointsChange" int
+            )
+    LANGUAGE plpgsql
+AS
+$$
 BEGIN
     RETURN QUERY EXECUTE '
-        SELECT u1.cp, CAST(SUM(u1.pa) AS BIGINT) 
+        SELECT u1.cp, CAST(SUM(u1.pa) AS int)
         FROM (
           (SELECT tp1.checking_peer AS cp, -SUM(points_amount) AS pa
           FROM transferred_points tp1
@@ -123,29 +150,27 @@ DROP FUNCTION IF EXISTS calculate_change_peer_points_task5();
 CREATE OR REPLACE FUNCTION calculate_change_peer_points_task5()
     RETURNS TABLE
             (
-                "Peer"         VARCHAR(16),
-                "PointsChange" BIGINT
+                "Peer"         varchar(16),
+                "PointsChange" int
             )
-LANGUAGE PLPGSQL AS $$
+    LANGUAGE plpgsql
+AS
+$$
 BEGIN
-    RETURN QUERY EXECUTE '
-        SELECT t3.Peer, SUM(t3.PointsAmount) FROM (
-            (SELECT t1."Peer1" AS Peer, CASE
-                WHEN SUM(t1."PointsAmount") < 0 THEN SUM(t1."PointsAmount")
-                ELSE -SUM(t1."PointsAmount")
-            END AS PointsAmount
-            FROM get_transferred_points_readable() AS t1
-            GROUP BY t1."Peer1")
-            UNION
-            (SELECT t2."Peer2", CASE
-                WHEN SUM(t2."PointsAmount") > 0 THEN SUM(t2."PointsAmount")
-                ELSE -SUM(t2."PointsAmount")
-            END AS PointsAmount
-            FROM get_transferred_points_readable() AS t2
-            GROUP BY t2."Peer2")
-            ) AS t3
-        GROUP BY t3.Peer
-        ORDER BY 2 DESC';
+    RETURN QUERY
+        EXECUTE '
+      SELECT t3.Peer, CAST(SUM(t3.PointsAmount) AS int)
+      FROM (
+        (SELECT t1."Peer1" AS Peer, CAST(COALESCE(SUM(t1."PointsAmount"), 0) AS numeric) AS PointsAmount
+        FROM get_transferred_points_readable() t1
+        GROUP BY t1."Peer1")
+        UNION
+        (SELECT t2."Peer2" AS Peer, CAST(COALESCE(SUM(t2."PointsAmount"), 0) AS numeric) AS PointsAmount
+        FROM get_transferred_points_readable() t2
+        GROUP BY t2."Peer2")
+      ) t3
+      GROUP BY t3.Peer
+      ORDER BY 2 DESC';
 END;
 $$;
 
@@ -162,11 +187,14 @@ FROM calculate_change_peer_points_task5();
 DROP FUNCTION IF EXISTS find_most_checked_task_for_each_day();
 
 CREATE OR REPLACE FUNCTION find_most_checked_task_for_each_day()
-    RETURNS TABLE (
-        "Day" DATE,
-        "Task" VARCHAR(255)
-    )
-LANGUAGE PLPGSQL AS $$
+    RETURNS TABLE
+            (
+                "Day"  date,
+                "Task" varchar(255)
+            )
+    LANGUAGE plpgsql
+AS
+$$
 BEGIN
     RETURN QUERY EXECUTE '
         SELECT date_check, task
@@ -220,7 +248,7 @@ FROM find_most_checked_task_for_each_day();
 
 -- -- Ниже представлена процедура FindPeersByBlock, которая принимает в качестве параметра название блока задач и выводит результат отсортированным по дате завершения.
 
--- CREATE PROCEDURE FindPeersByBlock(IN block_name VARCHAR(255))
+-- CREATE PROCEDURE FindPeersByBlock(IN block_name varchar(255))
 -- BEGIN
 --   SELECT
 --     p.peer_name AS 'Ник пира',
@@ -309,7 +337,7 @@ FROM find_most_checked_task_for_each_day();
 
 -- -- Ниже представлена процедура CalculatePeerPercentages, которая принимает в качестве параметров названия блоков (block1_name и block2_name) и выводит проценты в формате, указанном вами:
 
--- CREATE PROCEDURE CalculatePeerPercentages(IN block1_name VARCHAR(255), IN block2_name VARCHAR(255))
+-- CREATE PROCEDURE CalculatePeerPercentages(IN block1_name varchar(255), IN block2_name varchar(255))
 -- BEGIN
 --   DECLARE total_peers INT;
 --   DECLARE block1_peers INT;
@@ -372,13 +400,13 @@ FROM find_most_checked_task_for_each_day();
 --   SET birthday_pass_percent = (
 --     SELECT ROUND((COUNT(DISTINCT peer_name) / total_peers) * 100, 2)
 --     FROM Checks
---     WHERE DATE_FORMAT(birthday, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+--     WHERE date_FORMAT(birthday, '%m-%d') = date_FORMAT(CURdate(), '%m-%d')
 --       AND status = 'pass'
 --   );
 --   SET birthday_fail_percent = (
 --     SELECT ROUND((COUNT(DISTINCT peer_name) / total_peers) * 100, 2)
 --     FROM Checks
---     WHERE DATE_FORMAT(birthday, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')
+--     WHERE date_FORMAT(birthday, '%m-%d') = date_FORMAT(CURdate(), '%m-%d')
 --       AND status = 'fail'
 --   );
 
@@ -401,9 +429,9 @@ FROM find_most_checked_task_for_each_day();
 -- Для определения пиров, которые сдали задания 1 и 2, но не сдали задание 3, можно использовать следующую процедуру:
 
 -- CREATE PROCEDURE FindPeersWithSpecificTaskStatus(
---   IN task1 VARCHAR(255),
---   IN task2 VARCHAR(255),
---   IN task3 VARCHAR(255)
+--   IN task1 varchar(255),
+--   IN task2 varchar(255),
+--   IN task3 varchar(255)
 -- )
 -- BEGIN
 --   SELECT DISTINCT peer_name
@@ -464,8 +492,8 @@ FROM find_most_checked_task_for_each_day();
 -- )
 -- BEGIN
 --   WITH CTE AS (
---     SELECT DATE(p2p_start_time) AS check_date,
---            ROW_NUMBER() OVER (PARTITION BY DATE(p2p_start_time) ORDER BY p2p_start_time) AS row_num,
+--     SELECT date(p2p_start_time) AS check_date,
+--            ROW_NUMBER() OVER (PARTITION BY date(p2p_start_time) ORDER BY p2p_start_time) AS row_num,
 --            xp
 --     FROM Checks
 --     WHERE status = 'pass' AND xp >= 0.8 * (SELECT MAX(xp) FROM Checks)
@@ -537,12 +565,12 @@ FROM find_most_checked_task_for_each_day();
 --   IN M INT
 -- )
 -- BEGIN
---   DECLARE start_date DATE;
---   DECLARE end_date DATE;
-  
---   SET end_date = CURDATE();
---   SET start_date = DATE_SUB(end_date, INTERVAL N DAY);
-  
+--   DECLARE start_date date;
+--   DECLARE end_date date;
+
+--   SET end_date = CURdate();
+--   SET start_date = date_SUB(end_date, INTERVAL N DAY);
+
 --   SELECT DISTINCT peer
 --   FROM P2P
 --   WHERE p2p_start_time >= start_date
@@ -553,7 +581,7 @@ FROM find_most_checked_task_for_each_day();
 -- END;
 -- -- В этой процедуре параметр N указывает количество дней, а параметр M указывает минимальное количество раз, которое пир должен выходить из кампуса за указанный период.
 
--- -- Процедура сначала определяет начальную и конечную даты (start_date и end_date) на основе текущей даты (CURDATE()) и значения параметра N с помощью функции DATE_SUB.
+-- -- Процедура сначала определяет начальную и конечную даты (start_date и end_date) на основе текущей даты (CURdate()) и значения параметра N с помощью функции date_SUB.
 
 -- -- Затем процедура выполняет запрос, который выбирает уникальные пиры (peer) из таблицы P2P, у которых время начала (p2p_start_time) находится в указанном периоде (start_date - end_date) и признак выхода из кампуса (p2p_exit_campus) равен 1 (вышел из кампуса). Затем результаты группируются по пирам и фильтруются с помощью условия HAVING COUNT(*) > M, чтобы выбрать только те пиры, которые выходили из кампуса больше M раз за указанный период.
 
@@ -567,14 +595,14 @@ FROM find_most_checked_task_for_each_day();
 -- -- Для решения данной задачи, можно использовать следующий SQL-запрос:
 
 -- SELECT
---   DATE_FORMAT(p2p_start_time, '%Y-%m') AS month,
+--   date_FORMAT(p2p_start_time, '%Y-%m') AS month,
 --   COUNT(*) AS total_entries,
 --   SUM(CASE WHEN TIME(p2p_start_time) < '12:00:00' THEN 1 ELSE 0 END) AS early_entries,
 --   (SUM(CASE WHEN TIME(p2p_start_time) < '12:00:00' THEN 1 ELSE 0 END) / COUNT(*)) * 100 AS early_entry_percentage
 -- FROM P2P
 -- WHERE MONTH(p2p_start_time) = MONTH(date_of_birth)
 -- GROUP BY month;
--- -- В этом запросе используется функция DATE_FORMAT для извлечения месяца из столбца p2p_start_time в формате 'YYYY-MM'. Затем с помощью условной конструкции CASE подсчитывается общее количество входов (total_entries) и количество ранних входов (early_entries), где время начала (p2p_start_time) меньше '12:00:00'. Затем вычисляется процент ранних входов (early_entry_percentage) относительно общего числа входов.
+-- -- В этом запросе используется функция date_FORMAT для извлечения месяца из столбца p2p_start_time в формате 'YYYY-MM'. Затем с помощью условной конструкции CASE подсчитывается общее количество входов (total_entries) и количество ранних входов (early_entries), где время начала (p2p_start_time) меньше '12:00:00'. Затем вычисляется процент ранних входов (early_entry_percentage) относительно общего числа входов.
 
 -- -- Запрос также включает условие WHERE MONTH(p2p_start_time) = MONTH(date_of_birth), чтобы учитывать только пиры, родившиеся в том же месяце, что и время начала.
 

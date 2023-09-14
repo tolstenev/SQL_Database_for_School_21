@@ -20,17 +20,18 @@
 -- -------------------------------------------------------------------------------------- --
 
 CREATE OR REPLACE FUNCTION add_p2p_check(
-    checked_peer VARCHAR(16),
-    checking_peer VARCHAR(16),
-    task_title VARCHAR(32),
-    state_check state_of_check,
-    time_check timestamp
+    checked_peer  varchar(16),
+    checking_peer varchar(16),
+    task_title    varchar(32),
+    state_check   state_of_check,
+    time_check    timestamp
 )
-RETURNS VOID
-LANGUAGE plpgsql
+    RETURNS VOID
+    LANGUAGE plpgsql
 AS
 $$
-DECLARE check_id_max INTEGER;
+DECLARE
+    check_id_max int;
 BEGIN
     -- Добавление записи в таблицу Checks
     IF state_check = 'start' THEN
@@ -42,8 +43,8 @@ BEGIN
     SELECT MAX(id) INTO check_id_max FROM checks WHERE peer = checked_peer AND task = task_title;
 
     -- Добавление записи в таблицу P2P
-	INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
-	VALUES (check_id_max, checking_peer, state_check, time_check);
+    INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+    VALUES (check_id_max, checking_peer, state_check, time_check);
 
     -- Конец функции, транзакция будет автоматически завершена
 
@@ -61,32 +62,33 @@ $$;
 -- 2) Написать процедуру добавления проверки Verter'ом
 -- -------------------------------------------------------------------------------------- --
 
-CREATE  OR REPLACE FUNCTION add_verter_check(
-    checked_peer VARCHAR(16),
-    task_title VARCHAR(32),
-    state_check state_of_check,
-    time_check timestamp
+CREATE OR REPLACE FUNCTION add_verter_check(
+    checked_peer varchar(16),
+    task_title   varchar(32),
+    state_check  state_of_check,
+    time_check   timestamp
 ) RETURNS VOID AS
 $$
 DECLARE
-    latestSuccessfulP2PCheckID INT;
+    latest_successful_p2p_check_id int;
 BEGIN
     -- Получение ID последней успешной P2P проверки для задания
     SELECT MAX(id)
-    INTO latestSuccessfulP2PCheckID
+    INTO latest_successful_p2p_check_id
     FROM checks
     WHERE checks.task = task_title
       AND checks.peer = checked_peer;
 
     -- Добавление записи в таблицу Verter
     INSERT INTO verter (check_id, state_check, time_check)
-    VALUES (latestSuccessfulP2PCheckID, state_check, time_check);
+    VALUES (latest_successful_p2p_check_id, state_check, time_check);
 
 END;
 $$ LANGUAGE plpgsql;
 
 -- -------------------------------------------------------------------------------------- --
--- 3) Написать триггер: после добавления записи со статутом "начало" в таблицу P2P, изменить соответствующую запись в таблице TransferredPoints
+-- 3) Написать триггер: после добавления записи со статутом "начало" в таблицу P2P,
+--                      изменить соответствующую запись в таблице transferred_points
 -- -------------------------------------------------------------------------------------- --
 
 CREATE OR REPLACE FUNCTION add_start_p2p_check() RETURNS TRIGGER AS
@@ -118,10 +120,11 @@ EXECUTE FUNCTION add_start_p2p_check();
 -- Количество XP не превышает максимальное доступное для проверяемой задачи
 -- -------------------------------------------------------------------------------------- --
 
-CREATE OR REPLACE FUNCTION check_xp_amount() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION check_xp_amount() RETURNS TRIGGER AS
+$$
 BEGIN
     DECLARE
-        max_xp_value INT;
+        max_xp_value int;
     BEGIN
         SELECT max_xp
         INTO max_xp_value
@@ -139,22 +142,25 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- -------------------------------------------------------------------------------------- --
 -- Проверяет, не превышает ли добавляемое значение xp максимально возможное для данного задания
 -- перед добавлением/изменением в таблице xp
+-- -------------------------------------------------------------------------------------- --
 
 CREATE TRIGGER xp_check_xp_amount_trigger
-BEFORE
-INSERT
-OR
-UPDATE ON xp
-FOR EACH ROW EXECUTE FUNCTION check_xp_amount();
+    BEFORE
+        INSERT
+        OR
+        UPDATE
+    ON xp
+    FOR EACH ROW
+EXECUTE FUNCTION check_xp_amount();
 
 -- -------------------------------------------------------------------------------------- --
 -- Поле Check ссылается на успешную проверку Если запись не прошла проверку, не добавлять её в таблицу.
 -- -------------------------------------------------------------------------------------- --
 
-CREATE OR REPLACE FUNCTION check_success_p2p()
-    RETURNS TRIGGER AS
+CREATE OR REPLACE FUNCTION check_success_p2p() RETURNS TRIGGER AS
 $$
 BEGIN
     -- Проверка, что можно ссылаться только на успешные P2P проверки
@@ -180,20 +186,23 @@ EXECUTE FUNCTION check_success_p2p();
 
 
 CREATE TRIGGER xp_check_success_p2p
-BEFORE
-INSERT
-OR
-UPDATE ON xp
-FOR EACH ROW EXECUTE FUNCTION check_success_p2p();
+    BEFORE
+        INSERT
+        OR
+        UPDATE
+    ON xp
+    FOR EACH ROW
+EXECUTE FUNCTION check_success_p2p();
 
-
-
+-- -------------------------------------------------------------------------------------- --
 -- Функция для таблицы xp, которая проверяет, что проверка Verter'ом является успешной или отсутствует:
+-- -------------------------------------------------------------------------------------- --
 
-CREATE OR REPLACE FUNCTION check_success_verter() RETURNS TRIGGER AS $$
+CREATE OR REPLACE FUNCTION check_success_verter() RETURNS TRIGGER AS
+$$
 DECLARE
-    verter_check_success BOOLEAN;
-    verter_check_exists  BOOLEAN;
+    verter_check_success boolean;
+    verter_check_exists  boolean;
 BEGIN
     SELECT EXISTS(
                    SELECT 1
@@ -218,15 +227,19 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- -------------------------------------------------------------------------------------- --
 -- Проверяет есть ли успешная проверка verter'ом задания
 -- перед добавлением/изменением в таблице xp
+-- -------------------------------------------------------------------------------------- --
 
 CREATE TRIGGER xp_check_success_verter
-BEFORE
-INSERT
-OR
-UPDATE ON xp
-FOR EACH ROW EXECUTE FUNCTION check_success_verter();
+    BEFORE
+        INSERT
+        OR
+        UPDATE
+    ON xp
+    FOR EACH ROW
+EXECUTE FUNCTION check_success_verter();
 
 -- -------------------------------------------------------------------------------------- --
 -- Проверка
@@ -257,7 +270,7 @@ SELECT add_verter_check('nyarlath', 'C2_Simple_Bash_Utils', 'success', '2023-08-
 INSERT INTO xp (check_id, xp_amount)
 VALUES (7, 550);
 
--- Sucess max xp
+-- Sucсess max xp
 INSERT INTO xp (check_id, xp_amount)
 VALUES (7, 250);
 
@@ -265,7 +278,7 @@ VALUES (7, 250);
 SELECT add_p2p_check('pollare', 'manhunte', 'Pool', 'start', '2023-08-02 11:00:00');
 SELECT add_p2p_check('pollare', 'manhunte', 'Pool', 'success', '2023-08-02 11:00:10');
 
--- Sucess
+-- Sucсess
 INSERT INTO xp (check_id, xp_amount)
 VALUES (8, 150);
 
@@ -280,12 +293,17 @@ INSERT INTO xp (check_id, xp_amount)
 VALUES (9, 250);
 
 -- Проверка содержимого таблиц
-SELECT * FROM XP;
+SELECT *
+FROM XP;
 
-SELECT * FROM checks;
+SELECT *
+FROM checks;
 
-SELECT * FROM p2p;
+SELECT *
+FROM p2p;
 
-SELECT * FROM verter;
+SELECT *
+FROM verter;
 
-SELECT * FROM transferred_points;
+SELECT *
+FROM transferred_points;
