@@ -217,16 +217,86 @@ BEGIN
 END;
 $$;
 
--- Тест
--- Вызов процедуры и вывод списка функций. Вывод смотреть в консоли PostgreSQL
-DO $$
+-- -- Тест
+-- -- Вызов процедуры и вывод списка функций. Вывод смотреть в консоли PostgreSQL
+-- DO $$
+-- DECLARE
+--     function_count integer;
+-- BEGIN
+--     CALL get_scalar_functions_with_parameters(function_count);
+--     RAISE NOTICE 'Function count: %', function_count;
+-- END;
+-- $$;
+
+
+-- -------------------------------------------------------------------------------------- --
+-- 3) Создать хранимую процедуру с выходным параметром, которая уничтожает все SQL DML триггеры
+-- в текущей базе данных. Выходной параметр возвращает количество уничтоженных триггеров.
+-- -------------------------------------------------------------------------------------- --
+
+DROP PROCEDURE IF EXISTS drop_all_triggers;
+
+CREATE OR REPLACE PROCEDURE drop_all_triggers(OUT trigger_count INT)
+AS
+$$
 DECLARE
-    function_count integer;
+    table_rec RECORD;
+    trigger_rec RECORD;
+    drop_trigger_sql TEXT;
 BEGIN
-    CALL get_scalar_functions_with_parameters(function_count);
-    RAISE NOTICE 'Function count: %', function_count;
+    trigger_count := 0;
+
+    -- Получаем список таблиц с триггерами в текущей базе данных
+    FOR table_rec IN (
+        SELECT event_object_table AS table_name
+        FROM information_schema.triggers
+        GROUP BY table_name
+    )
+    LOOP
+        -- Получаем список триггеров для каждой таблицы
+        FOR trigger_rec IN (
+            SELECT trigger_name
+            FROM information_schema.triggers
+            WHERE event_object_table = table_rec.table_name
+        )
+        LOOP
+            -- Формируем SQL-запрос для удаления триггера
+            drop_trigger_sql := 'DROP TRIGGER ' || trigger_rec.trigger_name || ' ON "' || table_rec.table_name || '"';
+
+            -- Выполняем SQL-запрос для удаления триггера
+            EXECUTE drop_trigger_sql;
+
+            -- Увеличиваем счетчик уничтоженных триггеров
+            trigger_count := trigger_count + 1;
+        END LOOP;
+    END LOOP;
 END;
-$$;
+$$
+LANGUAGE plpgsql;
+
+-- -- Тест
+-- -- Вывод всех триггеров в текущей схеме
+-- SELECT  event_object_table AS table_name ,trigger_name
+-- FROM information_schema.triggers
+-- GROUP BY table_name, trigger_name
+-- ORDER BY table_name, trigger_name;
+-- -- Вызываем процедуру и получаем количество уничтоженных триггеров в переменную trigger_count
+-- DO $$
+-- DECLARE
+--     trigger_count integer;
+-- BEGIN
+--     CALL drop_all_triggers(trigger_count);
+--     RAISE NOTICE 'Number of dropped triggers: %', trigger_count;
+-- END;
+-- $$;
+-- -- Триггеров в текущей схеме отсутствуют
+-- SELECT  event_object_table AS table_name ,trigger_name
+-- FROM information_schema.triggers
+-- GROUP BY table_name, trigger_name
+-- ORDER BY table_name, trigger_name;
+
+
+
 
 
 -- -- Задача 1: Удаление таблиц с именами, начинающимися на 'TableName'
@@ -295,7 +365,7 @@ $$;
 --   DROP TABLE IF EXISTS ScalarFunctions;
 -- END //
 --
--- -- Задача 3: Уничтожение SQL DML триггеров
+-- Задача 3: Уничтожение SQL DML триггеров
 -- DROP PROCEDURE IF EXISTS DropDmlTriggers;
 --
 -- CREATE PROCEDURE DropDmlTriggers(OUT triggerCount INT)
