@@ -149,9 +149,9 @@ VALUES ('Category 1', 10.99),
 -- -------------------------------------------------------------------------------------- --
 
 
-DROP PROCEDURE IF EXISTS drop_tables_starting_with;
+DROP PROCEDURE IF EXISTS drop_tables_starting_with_table_name;
 
-CREATE OR REPLACE PROCEDURE drop_tables_starting_with(p_table_name_prefix text)
+CREATE OR REPLACE PROCEDURE drop_tables_starting_with_table_name()
     LANGUAGE plpgsql
 AS
 $$
@@ -163,7 +163,7 @@ BEGIN
         SELECT tables.table_name
         FROM information_schema.tables AS tables
         WHERE tables.table_schema = current_schema() -- Текущая схема
-          AND tables.table_name LIKE p_table_name_prefix || '%' -- Имена таблиц, начинающиеся с переданного префикса
+          AND tables.table_name LIKE 'TableName%' -- Имена таблиц, начинающиеся с 'TableName'
         LOOP
             -- Формируем и выполняем запрос на удаление таблицы
             EXECUTE 'DROP TABLE IF EXISTS ' || quote_ident(table_name) || ' CASCADE';
@@ -177,7 +177,7 @@ $$;
 -- FROM information_schema.tables
 -- WHERE table_schema = current_schema();
 -- -- Вызов процедуры с удалением таблиц, начинающихся с 'TableName'
--- CALL drop_tables_starting_with('TableName');
+-- CALL drop_tables_starting_with_table_name();
 -- -- Вывод оставшихся таблиц в текущей схеме
 -- SELECT table_name, table_schema
 -- FROM information_schema.tables
@@ -296,6 +296,54 @@ LANGUAGE plpgsql;
 -- ORDER BY table_name, trigger_name;
 
 
+-- -------------------------------------------------------------------------------------- --
+-- 4) Создать хранимую процедуру с входным параметром, которая выводит имена и описания типа объектов
+-- (только хранимых процедур и скалярных функций), в тексте которых на языке SQL встречается строка,
+-- задаваемая параметром процедуры.
+-- -------------------------------------------------------------------------------------- --
+
+
+DROP PROCEDURE IF EXISTS search_objects_by_sql_text;
+
+CREATE OR REPLACE PROCEDURE search_objects_by_sql_text(IN search_text text)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    object_record record;
+BEGIN
+    -- Поиск хранимых процедур и скалярных функций, содержащих заданный текст
+    FOR object_record IN
+        SELECT proname AS object_name, prokind AS object_type, pg_get_functiondef(p.oid) AS object_definition
+        FROM pg_proc p
+        WHERE p.prokind IN ('f', 'p') -- Только скалярные функции и хранимые процедуры
+            AND pg_get_functiondef(p.oid) ILIKE '%' || search_text || '%' -- Поиск текста в определении объекта
+    LOOP
+        RAISE NOTICE 'Object Name: %, Object Type: %, Object Definition: %', object_record.object_name, object_record.object_type, object_record.object_definition;
+    END LOOP;
+END;
+$$;
+
+-- -- Тест: Поиск объектов, содержащих текст "p_param2"
+-- CALL search_objects_by_sql_text('p_param2');
+-- -- Ожидаемый результат:
+-- -- Object Name: test_function_1, Object Type: f, Object Definition: CREATE OR REPLACE FUNCTION public.test_function_1(p_param1 integer, p_param2 text)
+-- -- RETURNS integer
+-- -- LANGUAGE plpgsql
+-- -- AS $function$
+-- -- BEGIN
+-- -- RETURN p_param1 + length(p_param2);
+-- -- END;
+
+-- -- Тест: Поиск объектов, содержащих текст "YYYY-MM-DD"
+-- CALL search_objects_by_sql_text('YYYY-MM-DD');
+-- -- Ожидаемый результат:
+-- -- Object Name: test_function_2, Object Type: f, Object Definition: CREATE OR REPLACE FUNCTION public.test_function_2(p_param1 date)
+-- -- RETURNS text
+-- -- LANGUAGE plpgsql
+-- -- AS $function$
+-- -- BEGIN
+-- -- RETURN to_char(p_param1, 'YYYY-MM-DD');
+-- -- END;
 
 
 
