@@ -5,7 +5,9 @@ DROP TABLE IF EXISTS
     "OtherTable1",
     "OtherTable2";
 
-DROP FUNCTION IF EXISTS myfunction;
+DROP FUNCTION IF EXISTS test_function_1;
+DROP FUNCTION IF EXISTS test_function_2;
+DROP FUNCTION IF EXISTS test_function_3;
 DROP FUNCTION IF EXISTS mytrigger_function;
 
 DROP TRIGGER IF EXISTS mytrigger ON TableName1;
@@ -53,16 +55,34 @@ CREATE TABLE "OtherTable2"
 );
 
 -- Создание функции
-CREATE FUNCTION myfunction(param1 INT, param2 VARCHAR) RETURNS VARCHAR AS
-$$
-DECLARE
-    result VARCHAR;
+-- Создание тестовых функций
+CREATE OR REPLACE FUNCTION test_function_1(p_param1 integer, p_param2 text)
+    RETURNS integer
+    LANGUAGE plpgsql
+AS $$
 BEGIN
-    -- Логика функции
-    result := 'Результат: ' || param1 || ' ' || param2;
-    RETURN result;
+    RETURN p_param1 + length(p_param2);
 END;
-$$ LANGUAGE plpgsql;
+$$;
+
+CREATE OR REPLACE FUNCTION test_function_2(p_param1 date)
+    RETURNS text
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    RETURN to_char(p_param1, 'YYYY-MM-DD');
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION test_function_3()
+    RETURNS void
+    LANGUAGE plpgsql
+AS $$
+BEGIN
+    -- Функция без параметров
+    NULL;
+END;
+$$;
 
 -- Создание триггера
 CREATE OR REPLACE FUNCTION mytrigger_function() RETURNS TRIGGER AS
@@ -122,10 +142,12 @@ VALUES ('Category 1', 10.99),
        ('Category 4', 15.75),
        ('Category 5', 8.49);
 
+
 -- -------------------------------------------------------------------------------------- --
 -- 1) Создать хранимую процедуру, которая, не уничтожая базу данных, уничтожает все те таблицы текущей базы данных,
 -- имена которых начинаются с фразы 'TableName'.
 -- -------------------------------------------------------------------------------------- --
+
 
 DROP PROCEDURE IF EXISTS drop_tables_starting_with;
 
@@ -149,17 +171,63 @@ BEGIN
 END;
 $$;
 
+-- -- Тест
+-- -- Вывод всех таблиц в текущей схеме
+-- SELECT table_name, table_schema
+-- FROM information_schema.tables
+-- WHERE table_schema = current_schema();
+-- -- Вызов процедуры с удалением таблиц, начинающихся с 'TableName'
+-- CALL drop_tables_starting_with('TableName');
+-- -- Вывод оставшихся таблиц в текущей схеме
+-- SELECT table_name, table_schema
+-- FROM information_schema.tables
+-- WHERE table_schema = current_schema();
+
+
+-- -------------------------------------------------------------------------------------- --
+-- 2) Создать хранимую процедуру с выходным параметром, которая выводит список имен и параметров
+-- всех скалярных SQL функций пользователя в текущей базе данных. Имена функций без параметров не выводить.
+-- Имена и список параметров должны выводиться в одну строку. Выходной параметр возвращает количество найденных функций.
+-- -------------------------------------------------------------------------------------- --
+
+DROP PROCEDURE IF EXISTS get_scalar_functions_with_parameters;
+
+CREATE OR REPLACE PROCEDURE get_scalar_functions_with_parameters(OUT function_count integer)
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    function_name text;
+    parameter_list text;
+BEGIN
+    function_count := 0; -- Инициализируем счетчик функций
+
+    -- Получаем список функций пользователя с параметрами
+    FOR function_name, parameter_list IN
+        SELECT p.proname, pg_catalog.pg_get_function_arguments(p.oid)
+        FROM pg_catalog.pg_proc p
+        LEFT JOIN pg_catalog.pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname = current_schema() -- Текущая схема
+            AND p.prorettype <> 'cstring'::pg_catalog.regtype -- Исключаем функции с возвращаемым типом cstring
+            AND pg_catalog.pg_function_is_visible(p.oid)
+            AND pg_catalog.pg_get_function_arguments(p.oid) <> '' -- Исключаем функции без параметров
+    LOOP
+        RAISE NOTICE '%(%): %', function_name, parameter_list, function_count;
+        function_count := function_count + 1;
+    END LOOP;
+END;
+$$;
+
 -- Тест
--- Вывод всех таблиц в текущей схеме
-SELECT table_name, table_schema
-FROM information_schema.tables
-WHERE table_schema = current_schema();
--- Вызов процедуры с удалением таблиц, начинающихся с 'TableName'
-CALL drop_tables_starting_with('TableName');
--- Вывод оставшихся таблиц в текущей схеме
-SELECT table_name, table_schema
-FROM information_schema.tables
-WHERE table_schema = current_schema();
+-- Вызов процедуры и вывод списка функций. Вывод смотреть в консоли PostgreSQL
+DO $$
+DECLARE
+    function_count integer;
+BEGIN
+    CALL get_scalar_functions_with_parameters(function_count);
+    RAISE NOTICE 'Function count: %', function_count;
+END;
+$$;
+
 
 -- -- Задача 1: Удаление таблиц с именами, начинающимися на 'TableName'
 -- DROP PROCEDURE IF EXISTS DropTablesStartingWithTableName;
