@@ -1,43 +1,47 @@
--- -------------------------------------------------------------------------------------- --
+--------------------------------------------------------------------------------------------
 -- 1) Написать функцию, возвращающую таблицу TransferredPoints в более человекочитаемом виде
 -- Ник пира 1, ник пира 2, количество переданных пир поинтов. 
 -- Количество отрицательное, если пир 2 получил от пира 1 больше поинтов.
--- -------------------------------------------------------------------------------------- --
+--------------------------------------------------------------------------------------------
+
+DROP FUNCTION get_transferred_points_readable();
 
 CREATE OR REPLACE FUNCTION get_transferred_points_readable()
     RETURNS TABLE
             (
                 "Peer1"        varchar(16),
                 "Peer2"        varchar(16),
-                "PointsAmount" bigint
+                "PointsAmount" int
             )
     LANGUAGE plpgsql
 AS
 $$
 BEGIN
     RETURN QUERY EXECUTE '
-        SELECT tp1.checking_peer, tp1.checked_peer,
-            CASE
-                WHEN (
-                    SELECT SUM(tp2.points_amount) FROM transferred_points tp2
-                    WHERE tp2.checked_peer = tp1.checking_peer AND tp2.checking_peer = tp1.checked_peer
-                ) > COUNT(points_amount) THEN -(SUM(points_amount))
-                ELSE SUM(points_amount)
-            END
-        FROM transferred_points tp1
-        GROUP BY 1, 2';
+        WITH  tmp AS (SELECT COALESCE(tp1.checking_peer, tp2.checked_peer) AS Peer1,
+                   COALESCE(tp1.checked_peer, tp2.checking_peer)  AS Peer2,
+                   COALESCE(tp1.points_amount, 0) - COALESCE(tp2.points_amount, 0) AS PointsAmount
+            FROM transferred_points tp1
+            FULL JOIN transferred_points tp2 ON tp1.checking_peer = tp2.checked_peer AND
+                     							tp1.checked_peer = tp2.checking_peer
+            WHERE COALESCE(tp1.checking_peer, tp2.checked_peer) > COALESCE(tp1.checked_peer, tp2.checking_peer))
+SELECT * FROM tmp ';
 END;
 $$;
 
--- todo: добавить данные, чтобы были записи с отрицательными и нулевыми значениями
+
 SELECT *
 FROM get_transferred_points_readable();
 
--- -------------------------------------------------------------------------------------- --
--- 2) Написать функцию, которая возвращает таблицу вида: ник пользователя, название проверенного задания, кол-во полученного XP
+
+--------------------------------------------------------------------------------------------
+-- 2) Написать функцию, которая возвращает таблицу вида: 
+-- ник пользователя, название проверенного задания, кол-во полученного XP.
+
 -- В таблицу включать только задания, успешно прошедшие проверку (определять по таблице Checks). 
--- Одна задача может быть успешно выполнена несколько раз. В таком случае в таблицу включать все успешные проверки.
--- -------------------------------------------------------------------------------------- --
+-- Одна задача может быть успешно выполнена несколько раз. 
+-- В таком случае в таблицу включать все успешные проверки.
+--------------------------------------------------------------------------------------------
 
 DROP FUNCTION IF EXISTS get_user_xp();
 
@@ -54,22 +58,22 @@ $$
 BEGIN
     RETURN QUERY EXECUTE '
         SELECT ch.peer, ch.task, xp.xp_amount
-        FROM checks AS ch
-        INNER JOIN xp ON ch.id = xp.check_id
-        INNER JOIN p2p ON ch.id = p2p.check_id
-        LEFT JOIN verter ON ch.id = verter.check_id
-        WHERE p2p.state_check = ''success'' AND (verter.state_check = ''success'' OR verter.state_check IS NULL)';
+        FROM xp 
+        JOIN checks ch ON ch.id = xp.check_id
+        ';
 END;
 $$;
 
 SELECT *
 FROM get_user_xp();
 
--- -------------------------------------------------------------------------------------- --
+
+
+------------------------------------------------------------------------------------------------
 -- 3) Написать функцию, определяющую пиров, которые не выходили из кампуса в течение всего дня
 -- Параметры функции: день, например 12.05.2022. 
 -- Функция возвращает только список пиров.
--- -------------------------------------------------------------------------------------- --
+-------------------------------------------------------------------------------------------------
 
 DROP FUNCTION IF EXISTS get_peers_inside_campus();
 
@@ -86,112 +90,95 @@ BEGIN
         SELECT peer_nickname
         FROM time_tracking tt
         WHERE tt.date_track = date_track
-        GROUP BY 1
-        HAVING SUM(state_track) = 3';
+        GROUP BY peer_nickname, date_track
+		HAVING SUM(state_track) = 1';
 END;
 $$;
 
 SELECT *
-FROM get_peers_inside_campus('2023-07-01');
+FROM get_peers_inside_campus('2023-04-01');
 
 
--- -------------------------------------------------------------------------------------- --
+--------------------------------------------------------------------------------------------
 -- 4) Посчитать изменение в количестве пир поинтов каждого пира по таблице TransferredPoints
 -- Результат вывести отсортированным по изменению числа поинтов. 
--- Формат вывода: ник пира, изменение в количество пир поинтов
--- -------------------------------------------------------------------------------------- --
+-- Формат вывода: ник пира, изменение в количество пир поинтов.
+--------------------------------------------------------------------------------------------
 
-
-DROP FUNCTION IF EXISTS calculate_change_peer_points();
-
-CREATE OR REPLACE FUNCTION calculate_change_peer_points()
-    RETURNS TABLE
-            (
-                "Peer"         varchar(16),
-                "PointsChange" int
-            )
-    LANGUAGE plpgsql
+CREATE OR REPLACE PROCEDURE calculate_change_peer_points(IN ref refcursor)
 AS
 $$
 BEGIN
-    RETURN QUERY EXECUTE '
-        SELECT u1.cp, CAST(SUM(u1.pa) AS int)
-        FROM (
-          (SELECT tp1.checking_peer AS cp, -SUM(points_amount) AS pa
-          FROM transferred_points tp1
-          GROUP BY 1)
-          UNION
-          (SELECT tp2.checked_peer AS cp, SUM(points_amount) AS pa
-          FROM transferred_points tp2
-          GROUP BY 1)
-        ) AS u1
-        GROUP BY u1.cp
-        ORDER BY 2 DESC';
+    OPEN REF FOR
+ 
+	WITH tmp AS (
+		SELECT checking_peer, points_amount
+		FROM transferred_points
+		UNION ALL
+		SELECT checked_peer, -1 * points_amount
+		FROM transferred_points)
+	SELECT checking_peer AS "Peer",
+			sum (points_amount) AS "PointsChange"
+	FROM tmp 
+	GROUP BY checking_peer
+	ORDER BY 2 desc;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-SELECT *
-FROM calculate_change_peer_points();
+BEGIN;
+CALL calculate_change_peer_points('ref');
+FETCH ALL IN "ref";
+END;
 
 
--- -------------------------------------------------------------------------------------- --
--- 5) Посчитать изменение в количестве пир поинтов каждого пира по таблице, возвращаемой первой функцией из Part 3
+--------------------------------------------------------------------------------------------
+-- 5) Посчитать изменение в количестве пир поинтов каждого пира по таблице, 
+-- возвращаемой первой функцией из Part 3.
 -- Результат вывести отсортированным по изменению числа поинтов. 
--- Формат вывода: ник пира, изменение в количество пир поинтов
--- -------------------------------------------------------------------------------------- --
+-- Формат вывода: ник пира, изменение в количество пир поинтов.
+--------------------------------------------------------------------------------------------
 
 DROP FUNCTION IF EXISTS calculate_change_peer_points_task5();
 
-CREATE OR REPLACE FUNCTION calculate_change_peer_points_task5()
-    RETURNS TABLE
-            (
-                "Peer"         varchar(16),
-                "PointsChange" int
-            )
-    LANGUAGE plpgsql
+CREATE OR REPLACE PROCEDURE calculate_change_peer_points_task5(IN ref refcursor)
 AS
 $$
 BEGIN
-    RETURN QUERY
-        EXECUTE '
-      SELECT t3.Peer, CAST(SUM(t3.PointsAmount) AS int)
-      FROM (
-        (SELECT t1."Peer1" AS Peer, CAST(COALESCE(SUM(t1."PointsAmount"), 0) AS numeric) AS PointsAmount
-        FROM get_transferred_points_readable() t1
-        GROUP BY t1."Peer1")
-        UNION
-        (SELECT t2."Peer2" AS Peer, CAST(COALESCE(SUM(t2."PointsAmount"), 0) AS numeric) AS PointsAmount
-        FROM get_transferred_points_readable() t2
-        GROUP BY t2."Peer2")
-      ) t3
-      GROUP BY t3.Peer
-      ORDER BY 2 DESC';
+    OPEN REF FOR
+        WITH t1 AS (SELECT "Peer1" AS Peer, sum("PointsAmount") AS pc
+                    FROM get_transferred_points_readable()
+                    GROUP BY 1),
+             t2 AS (SELECT "Peer2" AS Peer, sum("PointsAmount") * -1 AS pc
+                    FROM get_transferred_points_readable()
+                    GROUP BY 1)
+        SELECT Peer, sum(pc) AS PointsChange
+        FROM (SELECT * FROM t1 UNION ALL SELECT * FROM t2) AS tu
+        GROUP BY Peer
+        ORDER BY 2 DESC;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-SELECT *
-FROM calculate_change_peer_points_task5();
+BEGIN;
+CALL calculate_change_peer_points_task5('ref');
+FETCH ALL IN "ref";
+END;
 
 
--- -------------------------------------------------------------------------------------- --
+
+--------------------------------------------------------------------------------------------
 -- 6) Определить самое часто проверяемое задание за каждый день
 -- При одинаковом количестве проверок каких-то заданий в определенный день, вывести их все. 
 -- Формат вывода: день, название задания
--- -------------------------------------------------------------------------------------- --
+--------------------------------------------------------------------------------------------
 
 DROP FUNCTION IF EXISTS find_most_checked_task_for_each_day();
 
-CREATE OR REPLACE FUNCTION find_most_checked_task_for_each_day()
-    RETURNS TABLE
-            (
-                "Day"  date,
-                "Task" varchar(255)
-            )
-    LANGUAGE plpgsql
+CREATE OR REPLACE PROCEDURE find_most_checked_task_for_each_day(IN ref refcursor)
 AS
 $$
 BEGIN
-    RETURN QUERY EXECUTE '
+    OPEN REF FOR
+    
         SELECT date_check, task
         FROM (
             SELECT task, date_check, 
@@ -199,20 +186,24 @@ BEGIN
             FROM checks
             GROUP BY date_check, task
         ) AS subquery
-        WHERE rnk = 1;';
+        WHERE rnk = 1;
 END;
-$$;
+$$ LANGUAGE plpgsql;
 
-SELECT *
-FROM find_most_checked_task_for_each_day();
 
-/*
-task 7
-Найти всех пиров, выполнивших весь заданный блок задач и дату завершения последнего задания
-Параметры процедуры: название блока, например "CPP".
-Результат вывести отсортированным по дате завершения.
-Формат вывода: ник пира, дата завершения блока (т.е. последнего выполненного задания из этого блока)
-*/
+BEGIN;
+CALL find_most_checked_task_for_each_day('ref');
+FETCH ALL IN "ref";
+END;
+
+
+
+-- -------------------------------------------------------------------------------------- --
+--7) Найти всех пиров, выполнивших весь заданный блок задач и дату завершения последнего задания
+--Параметры процедуры: название блока, например "CPP".
+--Результат вывести отсортированным по дате завершения.
+--Формат вывода: ник пира, дата завершения блока (т.е. последнего выполненного задания из этого блока)
+-- -------------------------------------------------------------------------------------- --
 
 DROP PROCEDURE finished_date(IN block varchar, IN ref refcursor);
 
@@ -228,8 +219,8 @@ BEGIN
             FROM checks c
                      JOIN p2p pp ON c.id = pp.check_id
                      LEFT JOIN verter v ON c.id = v.check_id
-            WHERE pp.state_check = 'Success'
-              AND (v.state_check = 'Success' OR v.state_check IS NULL)
+            WHERE pp.state_check = 'success'
+              AND (v.state_check = 'success' OR v.state_check IS NULL)
               AND task SIMILAR TO concat(block, '[0-9]%')
             GROUP BY peer
         )
@@ -241,9 +232,9 @@ BEGIN
             FROM tasks
             WHERE title SIMILAR TO concat(block, '[0-9]%')
         );
-
 END;
 $$ LANGUAGE plpgsql;
+
 
 BEGIN;
 CALL finished_date('C', 'ref');
@@ -251,12 +242,12 @@ FETCH ALL IN "ref";
 END;
 
 
-/*
-8) Определить, к какому пиру стоит идти на проверку каждому обучающемуся
-Определять нужно исходя из рекомендаций друзей пира, т.е. нужно найти пира,
-проверяться у которого рекомендует наибольшее число друзей.
-Формат вывода: ник пира, ник найденного проверяющего
- */
+--------------------------------------------------------------------------------------------
+--8. Определить, к какому пиру стоит идти на проверку каждому обучающемуся
+--Определять нужно исходя из рекомендаций друзей пира, т.е. нужно найти пира,
+--проверяться у которого рекомендует наибольшее число друзей.
+--Формат вывода: ник пира, ник найденного проверяющего
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE recommended_peer(IN ref refcursor)
 AS
@@ -290,7 +281,6 @@ BEGIN
         SELECT b.nickname, recommended_peer
         FROM b
                  JOIN c ON c.count = b.count AND b.nickname = c.nickname;
-
 END;
 $$ LANGUAGE plpgsql;
 
@@ -299,16 +289,16 @@ CALL recommended_peer('ref');
 FETCH ALL IN "ref";
 END;
 
-/*
-9. Посчитать доли пиров, которые:
-- Приступили только к блоку 1
-- Приступили только к блоку 2
-- Приступили к обоим
-- Не приступили ни к одному
-
-Пир считается приступившим к блоку, если он проходил
-хоть одну проверку любого задания из этого блока (по таблице Checks)
- */
+--------------------------------------------------------------------------------------------
+--9. Посчитать доли пиров, которые:
+--- Приступили только к блоку 1
+--- Приступили только к блоку 2
+--- Приступили к обоим
+--- Не приступили ни к одному
+--
+--Пир считается приступившим к блоку, если он проходил
+--хоть одну проверку любого задания из этого блока (по таблице Checks)
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE started_block_2(IN ref refcursor,
                                             IN block1 varchar,
@@ -358,14 +348,13 @@ BEGIN
                  SELECT peer
                  FROM b1_b2
              )
-        SELECT (SELECT count(only_b1.peer) FROM only_b1) * 100 / (SELECT count(nickname) FROM peers) AS StartedBlock1,
+        SELECT (SELECT count(only_b1.peer) FROM only_b1) * 100 / (SELECT count(nickname) FROM peers) AS "StartedBlock1",
                (SELECT count(only_b2.peer) FROM only_b2) * 100 /
-               (SELECT count(nickname) FROM peers)                                                   AS StartedBlock2,
+               (SELECT count(nickname) FROM peers)                                                   AS "StartedBlock2",
                (SELECT count(b1_b2.peer) FROM b1_b2) * 100 /
-               (SELECT count(nickname) FROM peers)                                                   AS StartedBothBlocks,
+               (SELECT count(nickname) FROM peers)                                                   AS "StartedBothBlocks",
                (SELECT count(b_nothing.nickname) FROM b_nothing) * 100 /
-               (SELECT count(nickname) FROM peers)                                                   AS DidntStartAnyBlock;
-
+               (SELECT count(nickname) FROM peers)                                                   AS "DidntStartAnyBlock";
 END;
 $$ LANGUAGE plpgsql;
 
@@ -376,21 +365,26 @@ FETCH ALL IN "ref";
 END;
 
 
+--------------------------------------------------------------------------------------------
 --10. Определить процент пиров, которые когда-либо успешно проходили проверку в свой день рождения
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE birthday_check(IN ref refcursor)
 AS
 $$
 DECLARE
     peers_count int := (SELECT count(nickname)
-                        FROM peers);
+                        FROM peers
+                       	JOIN checks ON nickname = peer 
+                      	WHERE DATE_PART('month', date_check::DATE) = DATE_PART('month', birthday::DATE)
+              				AND DATE_PART('day', date_check::DATE) = DATE_PART('day', birthday::DATE) );
 BEGIN
     OPEN REF FOR
         WITH birth_suc AS (
             SELECT DISTINCT p.nickname
             FROM peers p
                      JOIN checks c ON p.nickname = c.peer
-                     JOIN p2p pp ON p.nickname = pp.checking_peer AND state_check = 'Success'
+                     JOIN p2p pp ON p.nickname = pp.checking_peer AND state_check = 'success'
             WHERE DATE_PART('month', date_check::DATE) = DATE_PART('month', birthday::DATE)
               AND DATE_PART('day', date_check::DATE) = DATE_PART('day', birthday::DATE)
         ),
@@ -398,13 +392,12 @@ BEGIN
                  SELECT DISTINCT p.nickname
                  FROM peers p
                           JOIN checks c ON p.nickname = c.peer
-                          JOIN p2p pp ON p.nickname = pp.checking_peer AND state_check = 'Failure'
+                          JOIN p2p pp ON p.nickname = pp.checking_peer AND state_check = 'failure'
                  WHERE DATE_PART('month', date_check::DATE) = DATE_PART('month', birthday::DATE)
                    AND DATE_PART('day', date_check::DATE) = DATE_PART('day', birthday::DATE)
              )
         SELECT ((SELECT count(nickname) FROM birth_suc) * 100 / peers_count) AS "SuccessfulChecks",
                ((SELECT count(nickname) FROM birth_fal) * 100 / peers_count) AS "UnsuccessfulChecks";
-
 END;
 $$ LANGUAGE plpgsql;
 
@@ -413,8 +406,9 @@ CALL birthday_check('ref');
 FETCH ALL IN "ref";
 END;
 
-
+--------------------------------------------------------------------------------------------
 --11. Определить всех пиров, которые сдали заданные задания 1 и 2, но не сдали задание 3
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE complete_task12_not_3(
     IN cursor REFCURSOR,
@@ -453,11 +447,10 @@ CALL complete_task12_not_3('REFCURSOR', 'C2_SimpleBashUtils', 'C3_s21_string+', 
 FETCH ALL IN "REFCURSOR";
 END;
 
-/*
-12. Используя рекурсивное обобщенное табличное выражение,
-для каждой задачи вывести кол-во предшествующих ей задач
- */
-
+--------------------------------------------------------------------------------------------
+--12. Используя рекурсивное обобщенное табличное выражение,
+--для каждой задачи вывести кол-во предшествующих ей задач
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE cnt_previous_tasks(IN cursor REFCURSOR)
 AS
@@ -497,9 +490,14 @@ CALL cnt_previous_tasks('REFCURSOR');
 FETCH ALL IN "REFCURSOR";
 END;
 
-/*
-13. Найти "удачные" для проверок дни. День считается "удачным", если в нем есть хотя бы N идущих подряд успешных проверки
- */
+--------------------------------------------------------------------------------------------
+--13. Найти "удачные" для проверок дни. День считается "удачным", 
+--если в нем есть хотя бы N идущих подряд успешных проверки
+--Временем проверки считать время начала P2P этапа. 
+--Под идущими подряд успешными проверками подразумеваются успешные проверки, между которыми нет неуспешных. 
+--При этом кол-во опыта за каждую из этих проверок должно быть не меньше 80% от максимального. 
+--Формат вывода: список дней
+-------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE cnt_suc_days(IN cursor REFCURSOR, IN N int)
 AS
@@ -509,20 +507,18 @@ BEGIN
         WITH tmp AS (
             SELECT date_check
             FROM checks c
-                     JOIN p2p p ON c.id = p.check_id AND state_check = 'Success'
+                     JOIN p2p p ON c.id = p.check_id AND state_check = 'success'
                      JOIN xp using (check_id)
             GROUP BY date_check
             HAVING count(date_check) = 2
         )
-
         SELECT count(DISTINCT date_check)
         FROM checks c
-                 JOIN p2p p ON c.id = p.check_id AND state_check = 'Success'
+                 JOIN p2p p ON c.id = p.check_id AND state_check = 'success'
                  JOIN xp using (check_id)
                  JOIN tasks t ON t.title = c.task
         WHERE date_check = (SELECT date_check FROM tmp)
           AND xp_amount * 100 / max_xp >= 80;
-
 END;
 $$ LANGUAGE plpgsql;
 
@@ -533,9 +529,9 @@ FETCH ALL IN "REFCURSOR";
 END;
 
 
-/*
-14. Определить пира с наибольшим количеством XP
-*/
+--------------------------------------------------------------------------------------------
+--14. Определить пира с наибольшим количеством XP
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE max_xp(IN ref refcursor)
 AS
@@ -549,7 +545,6 @@ BEGIN
         GROUP BY checks.peer
         ORDER BY SUM(xp_amount) DESC
         LIMIT 1;
-
 END;
 $$ LANGUAGE plpgsql;
 
@@ -559,9 +554,9 @@ FETCH ALL IN "ref";
 END;
 
 
-/*
-15. Определить пиров, приходивших раньше заданного времени не менее N раз за всё время
-*/
+--------------------------------------------------------------------------------------------
+--15. Определить пиров, приходивших раньше заданного времени не менее N раз за всё время
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE early_visit(IN ref refcursor,
                                         IN visit_time time,
@@ -569,34 +564,32 @@ CREATE OR REPLACE PROCEDURE early_visit(IN ref refcursor,
 )
 AS
 $$
-
 BEGIN
     OPEN REF FOR
         WITH tmp AS (
-            SELECT DISTINCT peer_nickname,
-                            count(peer_nickname),
-                            time_track
+            SELECT  peer_nickname,
+                            count(peer_nickname)                    
             FROM time_tracking
             WHERE time_track < visit_time
               AND state_track = 1
-            GROUP BY peer_nickname, time_track)
+            GROUP BY peer_nickname)
         SELECT peer_nickname
         FROM tmp
         WHERE count >= cnt;
-
 END;
 $$ LANGUAGE plpgsql;
 
 
 BEGIN;
-CALL early_visit('ref', '10:00:00', 1);
+CALL early_visit('ref', '16:00', 2);
 FETCH ALL IN "ref";
 END;
 
 
-/*
-16. Определить пиров, выходивших за последние N (60) дней из кампуса больше M раз (1)
-*/
+--------------------------------------------------------------------------------------------
+--16. Определить пиров, выходивших за последние N  дней из кампуса больше M раз 
+--Формат вывода: список пиров
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE peers_delay(IN ref refcursor,
                                         IN cnt_days int,
@@ -604,7 +597,6 @@ CREATE OR REPLACE PROCEDURE peers_delay(IN ref refcursor,
 )
 AS
 $$
-
 BEGIN
     OPEN REF FOR
         WITH a AS (
@@ -624,33 +616,26 @@ BEGIN
                  FROM time_tracking
                  WHERE state_track = 2
                  GROUP BY peer_nickname, date_track)
-        SELECT b.peer_nickname, days_from_now
+        SELECT DISTINCT b.peer_nickname
         FROM b
                  JOIN c ON b.peer_nickname = c.peer_nickname AND
                            days_from_now < cnt_days;
-
-
 END;
 $$ LANGUAGE plpgsql;
 
 
 BEGIN;
-CALL peers_delay('ref', 450, 1);
+CALL peers_delay('ref', 200, 2);
 FETCH ALL IN "ref";
 END;
 
-/*
-peer_nickname|cnt_days|
--------------+--------+
-tamelabe     |     442|
-*/
 
---17) Определить для каждого месяца процент ранних входов
+--------------------------------------------------------------------------------------------
+--17. Определить для каждого месяца процент ранних входов
 
 --Для каждого месяца посчитать, сколько раз люди, родившиеся в этот месяц,
---приходили в кампус за всё время
---(будем называть это общим числом входов).
-
+--приходили в кампус за всё время (будем называть это общим числом входов).
+--------------------------------------------------------------------------------------------
 
 CREATE OR REPLACE PROCEDURE EarlyEntries(IN ref refcursor)
 AS
@@ -679,7 +664,7 @@ BEGIN
                  FROM time_tracking tt
                           JOIN peers p ON tt.peer_nickname = p.nickname
                  WHERE state_track = 1
-                   AND time_track < '12:00:00'),
+                   AND time_track <= '12:00:00'),
              d AS (
                  SELECT visit_month,
                         count(peer_nickname) AS early_visits
@@ -703,7 +688,6 @@ BEGIN
                early_visits * 100 / total_visits AS "EarlyEntries"
         FROM b
                  JOIN d ON b.visit_month = d.visit_month;
-
 END;
 $$ LANGUAGE plpgsql;
 
@@ -711,3 +695,10 @@ BEGIN;
 CALL EarlyEntries('ref');
 FETCH ALL IN "ref";
 END;
+
+
+
+
+
+
+

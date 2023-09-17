@@ -1,6 +1,7 @@
 id,peer,recommended_peer
-1,cherigra,manhunte
-2,manhunte,tamelabe
-3,nyarlath,cherigra
-4,tamelabe,yonnarge
-5,yonnarge,nyarlath
+1,milagros,curranca
+2,nyarlath,curranca
+3,tamelabe,yonnarge
+4,keyesdar,ethylrac
+5,violette,ethylrac
+6,yonnarge,ethylrac
