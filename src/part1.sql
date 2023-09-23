@@ -155,8 +155,8 @@ CREATE TABLE p2p
     check_id      int            not null,
     checking_peer varchar(16)    not null,
     state_check   state_of_check not null,
-    time_check    timestamp      not null default CURRENT_TIMESTAMP,
-    CONSTRAINT ch_p2p_current_time CHECK (time_check <= CURRENT_TIMESTAMP),
+    time_check    time   not null,
+    --CONSTRAINT ch_p2p_current_time CHECK (time_check <= CURRENT_TIMESTAMP),
     CONSTRAINT fk_p2p_check_id FOREIGN KEY (check_id) REFERENCES checks (id),
     CONSTRAINT fk_p2p_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
     CONSTRAINT unique_p2p UNIQUE (check_id, state_check)
@@ -167,8 +167,8 @@ CREATE TABLE verter
     id          serial primary key,
     check_id    int            not null,
     state_check state_of_check not null,
-    time_check  timestamp      not null,
-    CONSTRAINT ch_verter_current_time CHECK (time_check <= current_timestamp),
+    time_check  time    not null,
+    --CONSTRAINT ch_verter_current_time CHECK (time_check <= current_timestamp),
     CONSTRAINT fk_verter_check_id FOREIGN KEY (check_id) REFERENCES checks (id)
 );
 -- Создание таблицы transferred_points
@@ -226,6 +226,7 @@ CREATE TABLE time_tracking
     CONSTRAINT ch_state_track CHECK (state_track IN (1, 2)),
     CONSTRAINT ch_date_track CHECK (date_track <= CURRENT_DATE)
 );
+
 
 
 -- -------------------------------------------------------------------------------------- --
@@ -394,53 +395,60 @@ $$;
 SELECT ImportTableFromCSV(
                'peers',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/peers.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/peers.csv'
            );
+          
+
+          
 SELECT ImportTableFromCSV(
                'tasks',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/tasks.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/tasks.csv'
            );
 SELECT ImportTableFromCSV(
                'checks',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/checks.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/checks.csv'
            );
 SELECT ImportTableFromCSV(
                'p2p',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/p2p.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/p2p.csv'
            );
 SELECT ImportTableFromCSV(
                'verter',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/verter.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/verter.csv'
            );
 SELECT ImportTableFromCSV(
                'transferred_points',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/transferred_points.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/transferred_points.csv'
            );
 SELECT ImportTableFromCSV(
                'friends',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/friends.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/friends.csv'
            );
 SELECT ImportTableFromCSV(
                'recommendations',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/recommendations.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/recommendations.csv'
            );
 SELECT ImportTableFromCSV(
                'xp',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/xp.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/xp.csv'
            );
+          
 SELECT ImportTableFromCSV(
                'time_tracking',
                ',',
-               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/time_tracking.csv'
+               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/time_tracking.csv'
            );
+   
+      
+          
 -- -- -- Импорт данных из CSV файла для Кристины
 -- SELECT ImportTableFromCSV(
 --         'peers',
