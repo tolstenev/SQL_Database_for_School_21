@@ -46,10 +46,18 @@ DROP FUNCTION IF EXISTS ExportTableToCSV(TEXT, CHAR, TEXT);
 -- Удаление триггера
 DROP TRIGGER IF EXISTS trigger_check_parent_task ON tasks;
 DROP TRIGGER IF EXISTS trigger_check_parent_task_before_delete ON tasks;
-DROP TRIGGER IF EXISTS trigger_check_date_p2p ON tasks;
+
+
+-- DROP TRIGGER IF EXISTS trigger_check_date_p2p ON tasks;
+
+
 DROP TRIGGER IF EXISTS check_state_first_record_in_p2p ON tasks;
 DROP TRIGGER IF EXISTS trigger_check_time_second_record_in_p2p ON tasks;
-DROP TRIGGER IF EXISTS trigger_check_verter_date ON tasks;
+
+
+-- DROP TRIGGER IF EXISTS trigger_check_verter_date ON tasks;
+
+
 DROP TRIGGER IF EXISTS check_state_first_record_in_verter ON tasks;
 DROP TRIGGER IF EXISTS check_verter_time_trigger ON tasks;
 DROP TRIGGER IF EXISTS trigger_check_time_second_record_in_verter ON tasks;
@@ -65,10 +73,18 @@ DROP TRIGGER IF EXISTS trigger_check_checks_records_before_delete ON tasks;
 -- Удаление функции
 DROP FUNCTION IF EXISTS check_parent_task();
 DROP FUNCTION IF EXISTS check_parent_task_before_delete();
-DROP FUNCTION IF EXISTS check_date_p2p();
+
+
+-- DROP FUNCTION IF EXISTS check_date_p2p();
+
+
 DROP FUNCTION IF EXISTS check_state_first_record_in_p2p();
 DROP FUNCTION IF EXISTS check_time_second_record_in_p2p();
-DROP FUNCTION IF EXISTS check_verter_date();
+
+
+-- DROP FUNCTION IF EXISTS check_verter_date();
+
+
 DROP FUNCTION IF EXISTS check_state_first_record_in_verter();
 DROP FUNCTION IF EXISTS check_verter_time();
 DROP FUNCTION IF EXISTS check_time_second_record_in_verter();
@@ -391,126 +407,74 @@ BEGIN
         );
 END;
 $$;
--- -- Импорт данных из CSV файла
+-- Импорт данных из CSV файла
 SELECT ImportTableFromCSV(
                'peers',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/peers.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/peers.csv'
            );
-          
 
-          
+
+
 SELECT ImportTableFromCSV(
                'tasks',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/tasks.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/tasks.csv'
            );
 SELECT ImportTableFromCSV(
                'checks',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/checks.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/checks.csv'
            );
 SELECT ImportTableFromCSV(
                'p2p',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/p2p.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/p2p.csv'
            );
 SELECT ImportTableFromCSV(
                'verter',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/verter.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/verter.csv'
            );
 SELECT ImportTableFromCSV(
                'transferred_points',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/transferred_points.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/transferred_points.csv'
            );
 SELECT ImportTableFromCSV(
                'friends',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/friends.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/friends.csv'
            );
 SELECT ImportTableFromCSV(
                'recommendations',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/recommendations.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/recommendations.csv'
            );
 SELECT ImportTableFromCSV(
                'xp',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/xp.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/xp.csv'
            );
-          
+
 SELECT ImportTableFromCSV(
                'time_tracking',
                ',',
-               '/Users/elenalomakina/21School_projects/SQL2_Info21_v1.0-4/src/data/time_tracking.csv'
+               '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/data/time_tracking.csv'
            );
-   
-      
-          
--- -- -- Импорт данных из CSV файла для Кристины
--- SELECT ImportTableFromCSV(
---         'peers',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/peers.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'tasks',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/tasks.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'checks',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/checks.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'p2p',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/p2p.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'verter',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/verter.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'transferred_points',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/transferred_points.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'friends',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/friends.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'recommendations',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/recommendations.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'xp',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/xp.csv'
---     );
--- SELECT ImportTableFromCSV(
---         'time_tracking',
---         ',',
---         '/opt/goinfre/nyarlath/SQL2_Info21_v1.0-3/src/data/time_tracking.csv'
---     );
+
+
 -- -- Экспорт данных в CSV файл
--- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/peers.csv');
--- SELECT ExportTableToCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/tasks.csv');
--- SELECT ExportTableToCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/checks.csv');
--- SELECT ExportTableToCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/p2p.csv');
--- SELECT ExportTableToCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/verter.csv');
--- SELECT ExportTableToCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/transferred_points.csv');
--- SELECT ExportTableToCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/friends.csv');
--- SELECT ExportTableToCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/recommendations.csv');
--- SELECT ExportTableToCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/xp.csv');
--- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-2/src/data/time_tracking.csv');
+-- SELECT ExportTableToCSV('peers', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/peers.csv');
+-- SELECT ExportTableToCSV('tasks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/tasks.csv');
+-- SELECT ExportTableToCSV('checks', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/checks.csv');
+-- SELECT ExportTableToCSV('p2p', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/p2p.csv');
+-- SELECT ExportTableToCSV('verter', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/verter.csv');
+-- SELECT ExportTableToCSV('transferred_points', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/transferred_points.csv');
+-- SELECT ExportTableToCSV('friends', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/friends.csv');
+-- SELECT ExportTableToCSV('recommendations', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/recommendations.csv');
+-- SELECT ExportTableToCSV('xp', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/xp.csv');
+-- SELECT ExportTableToCSV('time_tracking', ',', '/Volumes/YONNARGE_HP/docs/projects/sql/sql2-final/SQL2_Info21_v1.0-4/src/export_data/time_tracking.csv');
 
 
 -- -------------------------------------------------------------------------------------- --
@@ -536,10 +500,11 @@ CREATE TRIGGER trigger_check_parent_task
     ON tasks
     FOR EACH ROW
 EXECUTE FUNCTION check_parent_task();
--- Тест: parent_task не может быть null
--- Ожидается ERROR: parent_task must be not null
+-- -- Тест: parent_task не может быть null
+-- -- Ожидается ERROR: parent_task must be not null
 -- INSERT INTO tasks (title, max_xp)
 -- VALUES ('Intra', 100500);
+
 -- Проверяет перед удалением записи, что title не является для какой-либо другой записи parent_task
 CREATE OR REPLACE FUNCTION check_parent_task_before_delete() RETURNS TRIGGER AS
 $$
@@ -560,39 +525,47 @@ CREATE TRIGGER trigger_check_parent_task_before_delete
     ON tasks
     FOR EACH ROW
 EXECUTE FUNCTION check_parent_task_before_delete();
--- Тест на удаление записи с зависимостью parent_task
--- Ожидается ERROR: cannot delete task that is a parent task for other tasks
--- DELETE FROM tasks WHERE title = 'C2_Simple_Bash_Utils';
+-- -- Тест на удаление записи с зависимостью parent_task
+-- -- Ожидается ERROR: cannot delete task that is a parent task for other tasks
+-- DELETE FROM tasks WHERE title = 'C3_s21_string+';
+
+
+
+
+-- -- Проверяет, что добавляемая в p2p проверка имеет такую же дату, что и в checks
+-- CREATE OR REPLACE FUNCTION check_date_p2p() RETURNS TRIGGER AS
+-- $$
+-- BEGIN
+--     IF NOT EXISTS(
+--             SELECT 1
+--             FROM checks
+--             WHERE id = NEW.check_id
+--               AND date_check = NEW.time_check::date
+--         ) THEN
+--         RAISE EXCEPTION 'new record in p2p must have the same date in checks';
+--     END IF;
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
 -- Проверяет, что добавляемая в p2p проверка имеет такую же дату, что и в checks
-CREATE OR REPLACE FUNCTION check_date_p2p() RETURNS TRIGGER AS
-$$
-BEGIN
-    IF NOT EXISTS(
-            SELECT 1
-            FROM checks
-            WHERE id = NEW.check_id
-              AND date_check = NEW.time_check::date
-        ) THEN
-        RAISE EXCEPTION 'new record in p2p must have the same date in checks';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
--- Проверяет, что добавляемая в p2p проверка имеет такую же дату, что и в checks
-CREATE TRIGGER trigger_check_date_p2p
-    BEFORE
-        INSERT
-        OR
-        UPDATE
-    ON p2p
-    FOR EACH ROW
-EXECUTE FUNCTION check_date_p2p();
+-- CREATE TRIGGER trigger_check_date_p2p
+--     BEFORE
+--         INSERT
+--         OR
+--         UPDATE
+--     ON p2p
+--     FOR EACH ROW
+-- EXECUTE FUNCTION check_date_p2p();
 -- Тест: добавляемая в p2p проверка имеет дату, отличающуюся от checks
 -- Ожидание ERROR: new record in check must have the same date in p2p
--- INSERT INTO checks (id, peer, task, date_check)
--- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
--- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (11, 6, 'tamelabe', 'start', '2023-07-03 22:30:00.000000');
+-- INSERT INTO checks (peer, task, date_check)
+-- VALUES ('tamelabe', 'C2_SimpleBashUtils', '2023-07-02');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'start', '22:30:00');
+
+
+
+
 -- Проверяет, что первая запись в p2p для соответствующей проверки должна иметь статус 'start'
 CREATE OR REPLACE FUNCTION check_state_first_record_in_p2p() RETURNS TRIGGER AS
 $$
@@ -618,10 +591,13 @@ CREATE TRIGGER check_state_first_record_in_p2p
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_p2p();
--- Тест на первую запись не со статусом 'start' в p2p
--- Ожидается ERROR: only records with state "start" are allowed when check_id does not exist in p2p table
--- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (11, 6, 'tamelabe', 'failure', '2023-07-05 22:30:00.000000');
+-- -- Тест на первую запись не со статусом 'start' в p2p
+-- -- Ожидается ERROR: only records with state "start" are allowed when check_id does not exist in p2p table
+-- INSERT INTO checks (peer, task, date_check)
+-- VALUES ('tamelabe', 'C2_SimpleBashUtils', '2023-07-02');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'failure', '22:30:00');
+
 -- Проверяет, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
 CREATE OR REPLACE FUNCTION check_time_second_record_in_p2p() RETURNS TRIGGER AS
 $$
@@ -647,43 +623,50 @@ CREATE TRIGGER trigger_check_time_second_record_in_p2p
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_p2p();
--- Тест, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
--- Ожидается ERROR: time_check for the new p2p record should be after start record
--- INSERT INTO checks (id, peer, task, date_check)
--- VALUES (7, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-03');
--- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (11, 7, 'tamelabe', 'start', '2023-07-03 22:30:00.000000');
--- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (12, 7, 'tamelabe', 'failure', '2023-07-03 10:30:00.000000');
+-- -- Тест, что добавляемая в p2p запись не раньше чем запись start для соответствующей проверки
+-- -- Ожидается ERROR: time_check for the new p2p record should be after start record
+-- -- Если не было выполнено ранее, выполнить:
+-- INSERT INTO checks (peer, task, date_check)
+-- VALUES ('tamelabe', 'C2_SimpleBashUtils', '2023-07-02');
+-- -- Тест:
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'start', '22:30:00');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'failure', '10:30:00');
+
+
+
 -- Проверяет, что verter проверяет в тот же день, что и p2p
-CREATE OR REPLACE FUNCTION check_verter_date() RETURNS TRIGGER AS
-$$
-BEGIN
-    IF EXISTS(
-            SELECT 1
-            FROM checks
-            WHERE id = NEW.check_id
-              AND date_check != NEW.time_check::date
-        ) THEN
-        RAISE EXCEPTION 'the record must have the same date in checks table';
-    END IF;
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
--- Проверяет, что проверка verter'ом проходит в тот же день, что и p2p
-CREATE TRIGGER trigger_check_verter_date
-    BEFORE
-        INSERT
-        OR
-        UPDATE
-    ON verter
-    FOR EACH ROW
-EXECUTE FUNCTION check_verter_date();
+-- CREATE OR REPLACE FUNCTION check_verter_date() RETURNS TRIGGER AS
+-- $$
+-- BEGIN
+--     IF EXISTS(
+--             SELECT 1
+--             FROM checks
+--             WHERE id = NEW.check_id
+--               AND date_check != NEW.time_check::date
+--         ) THEN
+--         RAISE EXCEPTION 'the record must have the same date in checks table';
+--     END IF;
+--     RETURN NEW;
+-- END;
+-- $$ LANGUAGE plpgsql;
+-- -- Проверяет, что проверка verter'ом проходит в тот же день, что и p2p
+-- CREATE TRIGGER trigger_check_verter_date
+--     BEFORE
+--         INSERT
+--         OR
+--         UPDATE
+--     ON verter
+--     FOR EACH ROW
+-- EXECUTE FUNCTION check_verter_date();
 -- Тест, что проверка verter'ом проходит в тот же день, что и p2p
 -- Ожидается ERROR: the record must have the same date in checks table
 -- INSERT INTO verter (id, check_id, state_check, time_check)
 -- VALUES (7, 6, 'start', '2023-07-05 22:45:00.000000');
 -- Проверяет, что первая запись в verter имеет статус 'start'
+
+
 CREATE OR REPLACE FUNCTION check_state_first_record_in_verter() RETURNS TRIGGER AS
 $$
 BEGIN
@@ -708,10 +691,11 @@ CREATE TRIGGER check_state_first_record_in_verter
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_state_first_record_in_verter();
--- Тест, что первая запись в verter не имеет статус 'start'
--- Ожидается ERROR: only records with state "start" are allowed when check_id does not exist in verter table
--- INSERT INTO verter (id, check_id, state_check, time_check)
--- VALUES (7, 6, 'failure', '2023-07-02 22:45:00.000000');
+-- -- Тест, что первая запись в verter не имеет статус 'start'
+-- -- Ожидается ERROR: only records with state "start" are allowed when check_id does not exist in verter table
+-- INSERT INTO verter (check_id, state_check, time_check)
+-- VALUES (8, 'failure', '22:45:00');
+
 -- Проверяет, что время проверки verter'ом не раньше, чем окончание проверки p2p
 CREATE OR REPLACE FUNCTION check_verter_time() RETURNS TRIGGER AS
 $$
@@ -739,10 +723,11 @@ CREATE TRIGGER check_verter_time_trigger
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_verter_time();
--- Тест, что время проверки verter'ом не раньше, чем окончание проверки p2p
--- Ожидается ERROR: verter checking time cannot be earlier than p2p checking time
--- INSERT INTO verter (id, check_id, state_check, time_check)
--- VALUES (7, 6, 'start', '2023-07-02 10:45:00.000000');
+-- -- Тест, что время проверки verter'ом не раньше, чем окончание проверки p2p
+-- -- Ожидается ERROR: verter checking time cannot be earlier than p2p checking time
+-- INSERT INTO verter (check_id, state_check, time_check)
+-- VALUES (8, 'start', '10:45:00');
+
 -- Проверяет, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
 CREATE OR REPLACE FUNCTION check_time_second_record_in_verter() RETURNS TRIGGER AS
 $$
@@ -768,20 +753,21 @@ CREATE TRIGGER trigger_check_time_second_record_in_verter
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION check_time_second_record_in_verter();
--- Тест, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
--- Ожидается ERROR: time_check for the new verter record should be after start record
--- Если не было выполнено ранее, выполнить:
--- INSERT INTO checks (id, peer, task, date_check)
--- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
--- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
+-- -- Тест, что добавляемая в verter запись не раньше чем запись start для соответствующей проверки
+-- -- Ожидается ERROR: time_check for the new verter record should be after start record
+-- -- Если не было выполнено ранее, выполнить:
+-- INSERT INTO checks (peer, task, date_check)
+-- VALUES ('tamelabe', 'C2_SimpleBashUtils', '2023-07-02');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'start', '22:30:00');
 -- -- Тест:
--- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (12, 6, 'tamelabe', 'success', '2023-07-02 22:40:00.000000');
--- INSERT INTO verter (id, check_id, state_check, time_check)
--- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
--- INSERT INTO verter (id, check_id, state_check, time_check)
--- VALUES (8, 6, 'failure', '2023-07-02 22:42:00.000000');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'success', '22:40:00');
+-- INSERT INTO verter (check_id, state_check, time_check)
+-- VALUES (8, 'start', '22:45:00');
+-- INSERT INTO verter (check_id, state_check, time_check)
+-- VALUES (8, 'failure', '22:42:00');
+
 -- Проверяет, что рекомендуемый пир проводил проверку рекомендующего
 CREATE OR REPLACE FUNCTION check_recommendation() RETURNS TRIGGER AS
 $$
@@ -807,9 +793,10 @@ CREATE TRIGGER trigger_check_recommendation
     ON recommendations
     FOR EACH ROW
 EXECUTE FUNCTION check_recommendation();
--- Тест: рекомендуемый пир не проводил проверку рекомендующего
--- INSERT INTO recommendations (id, peer, recommended_peer)
--- VALUES (6, 'manhunte', 'cherigra');
+-- -- Тест: рекомендуемый пир не проводил проверку рекомендующего
+-- INSERT INTO recommendations (peer, recommended_peer)
+-- VALUES ('violette', 'ethylrac');
+
 -- Проверяет корректность записей в time_tracking
 CREATE OR REPLACE FUNCTION check_time_tracking() RETURNS TRIGGER AS
 $$
@@ -846,20 +833,21 @@ CREATE TRIGGER trigger_check_time_tracking
     ON time_tracking
     FOR EACH ROW
 EXECUTE FUNCTION check_time_tracking();
--- Тест: добавление записи со статусом входа без выхода (1 -> 1)
--- Ожидается ERROR: state 2 entry is missing before state 1 entry in time_tracking
--- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
--- VALUES (7, 'tamelabe', '2023-07-02', '10:00:00', 1);
--- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
--- VALUES (8, 'tamelabe', '2023-07-02', '11:00:00', 1);
--- Тест: добавление записи со статусом выхода без входа (первая запись за день) (NULL -> 2)
--- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
--- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
--- VALUES (8, 'tamelabe', '2023-07-03', '19:00:00', 2);
--- Тест: добавление записи со статусом выхода без входа (не первая запись за день) (2 -> 2)
--- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
--- INSERT INTO time_tracking (id, peer_nickname, date_track, time_track, state_track)
--- VALUES (8, 'tamelabe', '2023-07-01', '19:00:00', 2);
+-- -- Тест: добавление записи со статусом входа без выхода (1 -> 1)
+-- -- Ожидается ERROR: state 2 entry is missing before state 1 entry in time_tracking
+-- INSERT INTO time_tracking (peer_nickname, date_track, time_track, state_track)
+-- VALUES ('tamelabe', '2023-07-02', '10:00:00', 1);
+-- INSERT INTO time_tracking (peer_nickname, date_track, time_track, state_track)
+-- VALUES ('tamelabe', '2023-07-02', '11:00:00', 1);
+-- -- Тест: добавление записи со статусом выхода без входа (первая запись за день) (NULL -> 2)
+-- -- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
+-- INSERT INTO time_tracking (peer_nickname, date_track, time_track, state_track)
+-- VALUES ('tamelabe', '2023-07-03', '19:00:00', 2);
+-- -- Тест: добавление записи со статусом выхода без входа (не первая запись за день) (2 -> 2)
+-- -- Ожидается ERROR: state 1 entry is missing before state 2 entry in time_tracking
+-- INSERT INTO time_tracking (peer_nickname, date_track, time_track, state_track)
+-- VALUES ('tamelabe', '2023-07-01', '19:00:00', 2);
+
 -- Проверяет корректность записей в time_tracking перед удалением
 CREATE OR REPLACE FUNCTION check_time_tracking_before_delete() RETURNS TRIGGER AS
 $$
@@ -897,6 +885,7 @@ EXECUTE FUNCTION check_time_tracking_before_delete();
 -- -- Ожидается ERROR: In time_tracking, the number of state 1 and state 2 entries must be equal for each peer and date
 -- DELETE FROM time_tracking WHERE id = 3;
 -- Проверяет на завершение родительского таска для добавляемой записи проверки в таблицу check
+
 CREATE OR REPLACE FUNCTION check_parent_task_in_xp() RETURNS trigger AS
 $$
 BEGIN
@@ -932,10 +921,11 @@ CREATE TRIGGER check_xp_completed_trigger
     ON checks
     FOR EACH ROW
 EXECUTE FUNCTION check_parent_task_in_xp();
--- Тест: родительский таск для добавляемой записи в checks не выполнен
--- Ожидается ERROR: parent task is not completed
--- INSERT INTO checks (id, peer, task, date_check)
--- VALUES (7, 'manhunte', 'C3_s21_stringplus', '2023-07-02');
+-- -- Тест: родительский таск для добавляемой записи в checks не выполнен
+-- -- Ожидается ERROR: parent task is not completed
+-- INSERT INTO checks (peer, task, date_check)
+-- VALUES ('violette', 'C3_s21_string+', '2023-07-02');
+
 -- Проверяет, что добавляемая запись проверки в таблицу p2p не является третьей
 CREATE OR REPLACE FUNCTION p2p_check_two_records() RETURNS TRIGGER AS
 $$
@@ -952,17 +942,6 @@ BEGIN
     RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
--- Тест: попытка добавить третью запись для проверки в таблицу p2p
--- -- Если не было выполнено ранее, выполнить:
--- -- INSERT INTO checks (id, peer, task, date_check)
--- -- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
--- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- -- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
--- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- -- VALUES (12, 6, 'tamelabe', 'success', '2023-07-02 22:40:00.000000');
--- Ожидается ERROR: maximum number of records with the same check_id reached
--- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- VALUES (13, 6, 'tamelabe', 'failure', '2023-07-05 22:50:00.000000');
 -- Проверяет, что добавляемая запись проверки в таблицу p2p не является третьей
 CREATE TRIGGER p2p_check_two_records_trigger
     BEFORE
@@ -972,6 +951,18 @@ CREATE TRIGGER p2p_check_two_records_trigger
     ON p2p
     FOR EACH ROW
 EXECUTE FUNCTION p2p_check_two_records();
+-- -- Тест: попытка добавить третью запись для проверки в таблицу p2p
+-- -- Если не было выполнено ранее, выполнить:
+-- INSERT INTO checks (peer, task, date_check)
+-- VALUES ('tamelabe', 'C2_SimpleBashUtils', '2023-07-02');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'start', '22:30:00');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'success', '22:40:00');
+-- -- Ожидается ERROR: maximum number of records with the same check_id reached
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'failure', '22:50:00');
+
 -- Проверяет, что добавляемая запись проверки в таблицу verter не является третьей
 CREATE OR REPLACE FUNCTION verter_check_two_records() RETURNS TRIGGER AS
 $$
@@ -997,21 +988,22 @@ CREATE TRIGGER verter_check_two_records_trigger
     ON verter
     FOR EACH ROW
 EXECUTE FUNCTION verter_check_two_records();
--- Тест: попытка добавить третью запись для проверки в таблицу verter
+-- -- Тест: попытка добавить третью запись для проверки в таблицу verter
 -- -- Если не было выполнено ранее, выполнить:
--- -- INSERT INTO checks (id, peer, task, date_check)
--- -- VALUES (6, 'tamelabe', 'C2_Simple_Bash_Utils', '2023-07-02');
--- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- -- VALUES (11, 6, 'tamelabe', 'start', '2023-07-02 22:30:00.000000');
--- -- INSERT INTO p2p (id, check_id, checking_peer, state_check, time_check)
--- -- VALUES (12, 6, 'tamelabe', 'success', '2023-07-02 22:40:00.000000');
--- -- INSERT INTO verter (id, check_id, state_check, time_check)
--- -- VALUES (7, 6, 'start', '2023-07-02 22:45:00.000000');
--- -- INSERT INTO verter (id, check_id, state_check, time_check)
--- -- VALUES (8, 6, 'success', '2023-07-02 22:46:00.000000');
--- Ожидается ERROR: maximum number of records with the same check_id reached
+-- INSERT INTO checks (peer, task, date_check)
+-- VALUES ('tamelabe', 'C2_SimpleBashUtils', '2023-07-02');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'start', '22:30:00');
+-- INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
+-- VALUES (8, 'tamelabe', 'success', '22:40:00');
+-- INSERT INTO verter (check_id, state_check, time_check)
+-- VALUES (8, 'start', '22:45:00');
+-- -- Ожидается ERROR: maximum number of records with the same check_id reached
+-- INSERT INTO verter (check_id, state_check, time_check)
+-- VALUES (8, 'success', '22:46:00');
 -- INSERT INTO verter (id, check_id, state_check, time_check)
--- VALUES (8, 5, 'failure', '2023-07-05 22:47:00.000000');
+-- VALUES (8, 5, 'failure', '22:47:00');
+
 -- Проверяет, что если удаляемая запись содержит статус 'start',
 -- то для неё нет записи со статусом 'success' или 'failure'
 CREATE OR REPLACE FUNCTION check_verter_records_before_delete() RETURNS TRIGGER AS
@@ -1043,6 +1035,7 @@ EXECUTE FUNCTION check_verter_records_before_delete();
 -- Тест: удаляется запись со статусом 'start', для которой есть вторая запись
 -- Ожидается ERROR: сannot delete "start" record with corresponding "success" or "failure" record for the same check_id
 -- DELETE FROM verter WHERE id = 5;
+
 -- Проверяет, что для удаляемой в p2p записи нет соответствующих проверок verter'ом,
 -- и что если удаляемая запись содержит статус 'start',
 -- то для неё нет записи со статусом 'success' или 'failure'
@@ -1086,6 +1079,7 @@ EXECUTE FUNCTION check_p2p_records_before_delete();
 -- Тест: удаляется запись со статусом 'start', для которой есть вторая запись
 -- Ожидается: сannot delete "start" record from p2p with corresponding "success" or "failure" record for the same check_id
 -- DELETE FROM p2p WHERE id = 5;
+
 -- Проверяет, что для удаляемой записи нет проверок p2p и verter
 CREATE OR REPLACE FUNCTION check_checks_records_before_delete() RETURNS TRIGGER AS
 $$

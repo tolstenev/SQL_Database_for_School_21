@@ -10,7 +10,7 @@ DROP FUNCTION IF EXISTS test_function_2;
 DROP FUNCTION IF EXISTS test_function_3;
 DROP FUNCTION IF EXISTS mytrigger_function;
 
-DROP TRIGGER IF EXISTS mytrigger ON TableName1;
+DROP TRIGGER IF EXISTS mytrigger ON "TableName1";
 
 -- Создание базы данных
 -- CREATE DATABASE metadatabase;
@@ -90,8 +90,8 @@ $$
 BEGIN
     -- Логика триггера
     -- Например, перед вставкой записи в таблицу TableName1
-    IF NEW.name IS NULL THEN
-        RAISE EXCEPTION 'Имя не может быть пустым!';
+    IF NEW.price IS NULL THEN
+        RAISE EXCEPTION '"price" cannot be a null';
     END IF;
     RETURN NEW;
 END;
@@ -99,7 +99,7 @@ $$ LANGUAGE plpgsql;
 
 CREATE TRIGGER mytrigger
     BEFORE INSERT
-    ON "TableName1"
+    ON "OtherTable2"
     FOR EACH ROW
 EXECUTE FUNCTION mytrigger_function();
 
@@ -218,7 +218,7 @@ END;
 $$;
 
 -- -- Тест
--- -- Вызов процедуры и вывод списка функций. Вывод смотреть в консоли PostgreSQL
+-- Вызов процедуры и вывод списка функций. Вывод смотреть в консоли PostgreSQL
 -- DO $$
 -- DECLARE
 --     function_count integer;
@@ -227,6 +227,14 @@ $$;
 --     RAISE NOTICE 'Function count: %', function_count;
 -- END;
 -- $$;
+-- -- Ожидаемый вывод:
+-- test_function_1(p_param1 integer, p_param2 text): 0
+-- test_function_2(p_param1 date): 1
+-- get_scalar_functions_with_parameters(OUT function_count integer): 2
+-- drop_all_triggers(OUT trigger_count integer): 3
+-- search_objects_by_sql_text(IN search_text text): 4
+-- Function count: 5
+
 
 
 -- -------------------------------------------------------------------------------------- --
@@ -323,7 +331,7 @@ BEGIN
 END;
 $$;
 
--- -- Тест: Поиск объектов, содержащих текст "p_param2"
+-- -- Тест: Поиск объектов, содержащих текст "p_param2". Вывод смотреть в консоли PostgreSQL
 -- CALL search_objects_by_sql_text('p_param2');
 -- -- Ожидаемый результат:
 -- -- Object Name: test_function_1, Object Type: f, Object Definition: CREATE OR REPLACE FUNCTION public.test_function_1(p_param1 integer, p_param2 text)
@@ -334,13 +342,13 @@ $$;
 -- -- RETURN p_param1 + length(p_param2);
 -- -- END;
 
--- -- Тест: Поиск объектов, содержащих текст "YYYY-MM-DD"
--- CALL search_objects_by_sql_text('YYYY-MM-DD');
--- -- Ожидаемый результат:
--- -- Object Name: test_function_2, Object Type: f, Object Definition: CREATE OR REPLACE FUNCTION public.test_function_2(p_param1 date)
--- -- RETURNS text
--- -- LANGUAGE plpgsql
--- -- AS $function$
--- -- BEGIN
--- -- RETURN to_char(p_param1, 'YYYY-MM-DD');
--- -- END;
+-- Тест: Поиск объектов, содержащих текст "YYYY-MM-DD"
+CALL search_objects_by_sql_text('YYYY-MM-DD');
+-- Ожидаемый результат:
+-- Object Name: test_function_2, Object Type: f, Object Definition: CREATE OR REPLACE FUNCTION public.test_function_2(p_param1 date)
+-- RETURNS text
+-- LANGUAGE plpgsql
+-- AS $function$
+-- BEGIN
+-- RETURN to_char(p_param1, 'YYYY-MM-DD');
+-- END;
