@@ -2,18 +2,18 @@
 -- Чистка
 -- -------------------------------------------------------------------------------------- --
 
--- DROP TRIGGER IF EXISTS xp_check_success_p2p ON xp;
--- DROP TRIGGER IF EXISTS xp_check_xp_amount_trigger ON xp;
--- DROP TRIGGER IF EXISTS xp_check_success_verter ON xp;
--- DROP TRIGGER IF EXISTS verter_check_success_p2p_trigger ON verter;
--- DROP TRIGGER IF EXISTS add_start_p2p_check ON p2p;
+DROP FUNCTION IF EXISTS check_success_p2p() CASCADE;
+DROP FUNCTION IF EXISTS check_xp_amount() CASCADE;
+DROP FUNCTION IF EXISTS check_success_verter() CASCADE;
+DROP FUNCTION IF EXISTS add_start_p2p_check() CASCADE;
+DROP FUNCTION IF EXISTS add_verter_check() CASCADE;
+DROP FUNCTION IF EXISTS add_p2p_check() CASCADE;
 
--- DROP FUNCTION IF EXISTS check_success_p2p();
--- DROP FUNCTION IF EXISTS check_xp_amount();
--- DROP FUNCTION IF EXISTS check_success_verter();
--- DROP FUNCTION IF EXISTS add_start_p2p_check();
--- DROP FUNCTION IF EXISTS add_verter_check();
--- DROP FUNCTION IF EXISTS add_p2p_check();
+DROP TRIGGER IF EXISTS xp_check_success_p2p ON xp;
+DROP TRIGGER IF EXISTS xp_check_xp_amount_trigger ON xp;
+DROP TRIGGER IF EXISTS xp_check_success_verter ON xp;
+DROP TRIGGER IF EXISTS verter_check_success_p2p_trigger ON verter;
+DROP TRIGGER IF EXISTS add_start_p2p_check ON p2p;
 
 -- -------------------------------------------------------------------------------------- --
 -- 1) Написать процедуру добавления P2P проверки
@@ -44,7 +44,7 @@ BEGIN
 
     -- Добавление записи в таблицу P2P
     INSERT INTO p2p (check_id, checking_peer, state_check, time_check)
-    VALUES (check_id_max, checking_peer, state_check, time_check);
+    VALUES (check_id_max, checking_peer, state_check, time_check::time);
 
     -- Конец функции, транзакция будет автоматически завершена
 
@@ -66,7 +66,7 @@ CREATE OR REPLACE FUNCTION add_verter_check(
     checked_peer varchar(16),
     task_title   varchar(32),
     state_check  state_of_check,
-    time_check   timestamp
+    time_check   time
 ) RETURNS VOID AS
 $$
 DECLARE
@@ -245,52 +245,56 @@ EXECUTE FUNCTION check_success_verter();
 -- Проверка
 -- -------------------------------------------------------------------------------------- --
 
--- Шестая проверка
-SELECT add_p2p_check('manhunte', 'nyarlath', 'C2_Simple_Bash_Utils', 'start', '2023-08-02');
-SELECT add_p2p_check('manhunte', 'nyarlath', 'C2_Simple_Bash_Utils', 'success', '2023-08-02 11:00:00');
-SELECT add_verter_check('manhunte', 'C2_Simple_Bash_Utils', 'start', '2023-08-02 12:00:00');
-SELECT add_verter_check('manhunte', 'C2_Simple_Bash_Utils', 'failure', '2023-08-02 12:00:01');
+-- Проверка
+SELECT add_p2p_check('rossetel', 'nyarlath', 'C2_SimpleBashUtils', 'start', '2023-08-02 10:00:00');
+SELECT add_p2p_check('rossetel', 'nyarlath', 'C2_SimpleBashUtils', 'success', '2023-08-02 11:00:00');
+SELECT add_verter_check('rossetel', 'C2_SimpleBashUtils', 'start', '12:00:00');
+SELECT add_verter_check('rossetel', 'C2_SimpleBashUtils', 'failure', '12:00:01');
 
 -- Fail verter
+-- ERROR:  there are not successful verter check
 INSERT INTO xp (check_id, xp_amount)
-VALUES (6, 150);
+VALUES ((SELECT MAX(id) FROM checks WHERE peer = 'rossetel' AND task = 'C2_SimpleBashUtils'), 150);
 
--- Седьмая проверка
-SELECT add_p2p_check('nyarlath', 'pollare', 'C2_Simple_Bash_Utils', 'start', '2023-08-02');
-SELECT add_p2p_check('nyarlath', 'pollare', 'C2_Simple_Bash_Utils', 'success', '2023-08-02  11:00:00');
-SELECT add_verter_check('nyarlath', 'C2_Simple_Bash_Utils', 'start', '2023-08-02 12:00:00');
+-- Проверка
+SELECT add_p2p_check('violette', 'rossetel', 'C2_SimpleBashUtils', 'start', '2023-08-02 10:00:00');
+SELECT add_p2p_check('violette', 'rossetel', 'C2_SimpleBashUtils', 'success', '2023-08-02  11:00:00');
+SELECT add_verter_check('violette', 'C2_SimpleBashUtils', 'start', '12:00:00');
 
 -- Fail verter
+-- ERROR:  there are not successful verter check
 INSERT INTO xp (check_id, xp_amount)
-VALUES (7, 250);
+VALUES ((SELECT MAX(id) FROM checks WHERE peer = 'violette' AND task = 'C2_SimpleBashUtils'), 250);
 
-SELECT add_verter_check('nyarlath', 'C2_Simple_Bash_Utils', 'success', '2023-08-02 12:00:01');
+SELECT add_verter_check('violette', 'C2_SimpleBashUtils', 'success', '12:00:01');
 
 -- Fail max xp
+-- ERROR:  xp_amount exceeds max_xp
 INSERT INTO xp (check_id, xp_amount)
-VALUES (7, 550);
+VALUES ((SELECT MAX(id) FROM checks WHERE peer = 'violette' AND task = 'C2_SimpleBashUtils'), 550);
 
 -- Sucсess max xp
 INSERT INTO xp (check_id, xp_amount)
-VALUES (7, 250);
+VALUES ((SELECT MAX(id) FROM checks WHERE peer = 'violette' AND task = 'C2_SimpleBashUtils'), 250);
 
--- Восьмая проверка
-SELECT add_p2p_check('pollare', 'manhunte', 'Pool', 'start', '2023-08-02 11:00:00');
-SELECT add_p2p_check('pollare', 'manhunte', 'Pool', 'success', '2023-08-02 11:00:10');
+-- Проверка
+SELECT add_p2p_check('violette', 'rossetel', 'C3_s21_string+', 'start', '2023-08-02 11:00:00');
+SELECT add_p2p_check('violette', 'rossetel', 'C3_s21_string+', 'success', '2023-08-02 11:00:10');
 
 -- Sucсess
 INSERT INTO xp (check_id, xp_amount)
-VALUES (8, 150);
+VALUES ((SELECT MAX(id) FROM checks WHERE peer = 'violette' AND task = 'C3_s21_string+'), 150);
 
--- Девятая проверка
-SELECT add_p2p_check('pollare', 'manhunte', 'C2_Simple_Bash_Utils', 'start', '2023-08-02 11:01:00');
-SELECT add_p2p_check('pollare', 'manhunte', 'C2_Simple_Bash_Utils', 'success', '2023-08-02 11:01:10');
-SELECT add_verter_check('pollare', 'C2_Simple_Bash_Utils', 'start', '2023-08-02 12:00:00');
-SELECT add_verter_check('pollare', 'C2_Simple_Bash_Utils', 'failure', '2023-08-02 12:00:01');
+-- Проверка
+SELECT add_p2p_check('nyarlath', 'violette', 'C3_s21_string+', 'start', '2023-08-03 11:01:00');
+SELECT add_p2p_check('nyarlath', 'violette', 'C3_s21_string+', 'success', '2023-08-03 11:01:10');
+SELECT add_verter_check('nyarlath', 'C3_s21_string+', 'start', '12:00:00');
+SELECT add_verter_check('nyarlath', 'C3_s21_string+', 'failure', '12:00:01');
 
 -- Fail verter
+-- ERROR:  there are not successful verter check
 INSERT INTO xp (check_id, xp_amount)
-VALUES (9, 250);
+VALUES ((SELECT MAX(id) FROM checks WHERE peer = 'nyarlath' AND task = 'C3_s21_string+'), 250);
 
 -- Проверка содержимого таблиц
 SELECT *
