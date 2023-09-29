@@ -11,21 +11,28 @@ CREATE OR REPLACE FUNCTION get_transferred_points_readable()
             (
                 "Peer1"        varchar(16),
                 "Peer2"        varchar(16),
-                "PointsAmount" int
+                "PointsAmount" bigint
             )
     LANGUAGE plpgsql
 AS
 $$
 BEGIN
     RETURN QUERY EXECUTE '
-        WITH  tmp AS (SELECT COALESCE(tp1.checking_peer, tp2.checked_peer) AS Peer1,
-                   COALESCE(tp1.checked_peer, tp2.checking_peer)  AS Peer2,
-                   COALESCE(tp1.points_amount, 0) - COALESCE(tp2.points_amount, 0) AS PointsAmount
-            FROM transferred_points tp1
-            FULL JOIN transferred_points tp2 ON tp1.checking_peer = tp2.checked_peer AND
-                     							tp1.checked_peer = tp2.checking_peer
-            WHERE COALESCE(tp1.checking_peer, tp2.checked_peer) > COALESCE(tp1.checked_peer, tp2.checking_peer))
-SELECT * FROM tmp ';
+        WITH  tmp AS (
+        SELECT 
+            COALESCE(tp1.checking_peer, tp2.checked_peer) AS Peer1,
+            COALESCE(tp1.checked_peer, tp2.checking_peer)  AS Peer2,
+            SUM(COALESCE(tp1.points_amount, 0) - COALESCE(tp2.points_amount, 0)) AS PointsAmount
+        FROM transferred_points tp1
+        FULL JOIN transferred_points tp2 
+            ON tp1.checking_peer = tp2.checked_peer AND tp1.checked_peer = tp2.checking_peer
+        WHERE 
+            COALESCE(tp1.checking_peer, tp2.checked_peer) > COALESCE(tp1.checked_peer, tp2.checking_peer)
+        GROUP BY 1, 2
+        ORDER BY 3 DESC
+        )
+        SELECT * FROM tmp
+        ';
 END;
 $$;
 
@@ -105,6 +112,8 @@ FROM get_peers_inside_campus('2023-04-01');
 -- Формат вывода: ник пира, изменение в количество пир поинтов.
 --------------------------------------------------------------------------------------------
 
+DROP PROCEDURE IF EXISTS calculate_change_peer_points(IN ref refcursor);
+
 CREATE OR REPLACE PROCEDURE calculate_change_peer_points(IN ref refcursor)
 AS
 $$
@@ -138,7 +147,7 @@ END;
 -- Формат вывода: ник пира, изменение в количество пир поинтов.
 --------------------------------------------------------------------------------------------
 
-DROP FUNCTION IF EXISTS calculate_change_peer_points_task5();
+DROP PROCEDURE IF EXISTS calculate_change_peer_points_task5(IN ref refcursor);
 
 CREATE OR REPLACE PROCEDURE calculate_change_peer_points_task5(IN ref refcursor)
 AS
@@ -171,7 +180,7 @@ END;
 -- Формат вывода: день, название задания
 --------------------------------------------------------------------------------------------
 
-DROP FUNCTION IF EXISTS find_most_checked_task_for_each_day();
+DROP PROCEDURE IF EXISTS find_most_checked_task_for_each_day(IN ref refcursor);
 
 CREATE OR REPLACE PROCEDURE find_most_checked_task_for_each_day(IN ref refcursor)
 AS
