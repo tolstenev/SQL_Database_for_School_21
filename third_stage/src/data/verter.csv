@@ -1,0 +1,11 @@
+id,check_id,state_check,time_check
+1,2,start,10:31
+2,2,success,10:32
+3,3,start,9:41
+4,3,failure,9:42
+5,4,start,10:31
+6,4,success,10:32
+7,5,start,9:51
+8,5,success,9:52
+9,6,start,11:01
+10,6,success,11:02
