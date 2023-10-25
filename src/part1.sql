@@ -46,8 +46,8 @@ CREATE TABLE checks
     id         serial primary key,
     peer       varchar(16) not null,
     task       varchar(32) not null,
-    date_check date        not null,
-    CONSTRAINT ch_checks_current_date CHECK (date_check <= current_date),
+    date_check date        not null default CURRENT_DATE,
+    CONSTRAINT ch_checks_current_date CHECK (date_check <= CURRENT_DATE),
     CONSTRAINT fk_checks_peer FOREIGN KEY (peer) REFERENCES peers (nickname),
     CONSTRAINT fk_checks_task FOREIGN KEY (task) REFERENCES tasks (title)
 );
@@ -59,8 +59,8 @@ CREATE TABLE p2p
     check_id      int            not null,
     checking_peer varchar(16)    not null,
     state_check   state_of_check not null,
-    time_check    timestamp      not null,
-    CONSTRAINT ch_p2p_current_time CHECK (time_check <= current_timestamp),
+    time_check    timestamp      not null default CURRENT_TIMESTAMP,
+    CONSTRAINT ch_p2p_current_time CHECK (time_check <= CURRENT_TIMESTAMP),
     CONSTRAINT fk_p2p_check_id FOREIGN KEY (check_id) REFERENCES checks (id),
     CONSTRAINT fk_p2p_checking_peer FOREIGN KEY (checking_peer) REFERENCES peers (nickname),
     CONSTRAINT unique_p2p UNIQUE (check_id, state_check)
@@ -656,7 +656,7 @@ $$ LANGUAGE plpgsql;
 
 -- Проверяет на завершение родительского таска для добавляемой записи проверки в таблицу check
 CREATE TRIGGER check_xp_completed_trigger
-    AFTER INSERT OR UPDATE
+    BEFORE INSERT OR UPDATE
     ON checks
     FOR EACH ROW
 EXECUTE FUNCTION check_parent_task_in_xp();
